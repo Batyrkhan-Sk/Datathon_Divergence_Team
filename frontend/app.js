@@ -384,7 +384,7 @@
     var banner = $('verdict');
     banner.classList.toggle('is-violation', r.isViolation);
     banner.classList.toggle('is-clean', !r.isViolation);
-    var title = r.isViolation ? 'Обнаружены признаки возможных нарушений' : 'Нарушение не обнаружено';
+    var title = r.isViolation ? 'Найдены возможные нарушения' : 'Нарушений не найдено';
     $('verdict-title').textContent = title;
 
     var meta = [];
@@ -633,7 +633,7 @@
     return el('section', { class: 'rule', 'aria-label': 'Нормативное основание, эпизод ' + num }, children);
   }
 
-  /* ---------- video + timeline ---------- */
+  /* ---------- video ---------- */
 
   function releaseVideo() {
     video.onloadedmetadata = null;
@@ -649,7 +649,6 @@
     state.playerOk = ok;
     $('video-wrap').hidden = !ok;
     $('player-note').hidden = ok;
-    if (!ok) $('timeline').hidden = true;
     document.querySelectorAll('.timecode-btn').forEach(function (b) {
       b.disabled = !ok;
       if (!ok) b.removeAttribute('aria-label');
@@ -659,7 +658,6 @@
 
   function setupVideo(file, violations) {
     releaseVideo();
-    $('timeline').hidden = true;
     if (!file) { setPlayerAvailable(false); return; }
 
     // .mov is often reported as video/quicktime, which Chromium says it cannot
@@ -674,45 +672,10 @@
     setPlayerAvailable(true);
     video.onerror = function () { setPlayerAvailable(false); };
     video.onloadedmetadata = function () {
-      if (!video.videoWidth) { setPlayerAvailable(false); return; } // e.g. audio-only decode
-      renderTimeline(video.duration, violations);
+      if (!video.videoWidth) setPlayerAvailable(false); // e.g. audio-only decode
     };
     state.objectUrl = URL.createObjectURL(file);
     video.src = state.objectUrl;
-  }
-
-  function renderTimeline(duration, violations) {
-    var track = $('timeline-track');
-    track.querySelectorAll('.marker').forEach(function (m) { m.remove(); });
-    var timed = violations.filter(function (v) { return v.timecode !== null; });
-    // Without timed findings (e.g. a clean result) an empty scale adds nothing.
-    if (!isFinite(duration) || duration <= 0 || !timed.length) { $('timeline').hidden = true; return; }
-
-    $('timeline-duration').textContent = Fmt.formatTimecode(duration);
-    timed.forEach(function (v) {
-      var i = violations.indexOf(v);
-      var pos = Math.min(100, Math.max(0, (v.timecode / duration) * 100));
-      var tc = Fmt.formatTimecode(v.timecode);
-      track.appendChild(el('button', {
-        type: 'button',
-        class: 'marker',
-        style: 'left:' + pos + '%',
-        'data-index': String(i),
-        title: (i + 1) + '. ' + v.type + ' — ' + tc,
-        'aria-label': 'Эпизод ' + (i + 1) + ', ' + tc + ': ' + v.type,
-        onclick: function () { seekTo(v.timecode, i, true); }
-      }, [el('span', { text: String(i + 1) })]));
-    });
-    $('timeline-hint').textContent = timed.length
-      ? 'Нажмите на метку или карточку эпизода, чтобы перейти к этому моменту.'
-      : '';
-    $('timeline').hidden = false;
-
-    var played = $('timeline-played');
-    video.ontimeupdate = function () {
-      played.style.width = Math.min(100, (video.currentTime / duration) * 100) + '%';
-    };
-    video.ontimeupdate();
   }
 
   function isInViewport(node) {
@@ -721,27 +684,20 @@
   }
 
   function highlight(index) {
-    document.querySelectorAll('.finding.is-active, .marker.is-active').forEach(function (n) {
+    document.querySelectorAll('.finding.is-active').forEach(function (n) {
       n.classList.remove('is-active');
     });
     var card = $('finding-' + (index + 1));
     if (card) card.classList.add('is-active');
-    var marker = document.querySelector('.marker[data-index="' + index + '"]');
-    if (marker) marker.classList.add('is-active');
     return card;
   }
 
-  /** Seeks the player; fromTimeline scrolls to the card instead of the player. */
-  function seekTo(t, index, fromTimeline) {
-    var card = highlight(index);
+  function seekTo(t, index) {
+    highlight(index);
     if (!state.playerOk) return;
     try { video.currentTime = Math.max(0, t); } catch (e) { return; }
-    if (fromTimeline) {
-      if (card && !isInViewport(card)) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    } else {
-      var wrap = $('video-wrap');
-      if (!isInViewport(wrap)) wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+    var wrap = $('video-wrap');
+    if (!isInViewport(wrap)) wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
     announce('Видео перемотано на ' + Fmt.formatTimecode(t) + '.');
   }
 
@@ -749,6 +705,39 @@
 
   var lightbox = $('lightbox');
   var lbImg = $('lightbox-img');
+  var lbVideo = $('lightbox-video');
+  var LB_LEAD_SEC = 2; // start a little before the frame so the moment has context
+
+  /** Switches the viewer between the evidence frame and the video at that moment. */
+  function setLightboxVideo(on) {
+    var lb = state.lightbox;
+    if (on && lb && state.objectUrl) {
+      var f = state.result.violations[lb.vIndex].frames[lb.fIndex];
+      var t = Math.max(0, f.timestamp - LB_LEAD_SEC);
+      if (lbVideo.getAttribute('src') !== state.objectUrl) lbVideo.src = state.objectUrl;
+      var go = function () {
+        lbVideo.onloadedmetadata = null;
+        try { lbVideo.currentTime = t; } catch (e) { /* ignore */ }
+        var p = lbVideo.play();
+        if (p && p.catch) p.catch(function () { /* autoplay blocked: controls stay */ });
+      };
+      if (lbVideo.readyState >= 1) go(); else lbVideo.onloadedmetadata = go;
+      lbImg.hidden = true;
+      lbVideo.hidden = false;
+      lb.playing = true;
+      $('lb-seek').textContent = 'Показать кадр';
+      $('lightbox-caption').textContent = 'Эпизод ' + (lb.vIndex + 1) + ' · видео с ' +
+        Fmt.formatTimecode(t);
+      announce('Воспроизведение с ' + Fmt.formatTimecode(t) + '.');
+    } else {
+      try { lbVideo.pause(); } catch (e) { /* ignore */ }
+      lbVideo.onloadedmetadata = null;
+      lbVideo.hidden = true;
+      lbImg.hidden = false;
+      if (lb) lb.playing = false;
+      $('lb-seek').textContent = 'Показать момент в видео';
+    }
+  }
 
   function showLightboxFrame() {
     var lb = state.lightbox;
@@ -756,6 +745,7 @@
     var f = v.frames[lb.fIndex];
     var total = v.frames.length;
     var ts = Fmt.formatTimecode(f.timestamp);
+    setLightboxVideo(false);
     lbImg.src = f.src;
     lbImg.alt = 'Кадр ' + (lb.fIndex + 1) + ' из ' + total + ', ' + ts + ': ' + v.type;
     $('lightbox-caption').textContent = 'Эпизод ' + (lb.vIndex + 1) + ' · кадр ' +
@@ -793,6 +783,7 @@
   lightbox.addEventListener('close', function () {
     document.body.classList.remove('lightbox-open');
     var opener = state.lightbox && state.lightbox.opener;
+    setLightboxVideo(false);
     state.lightbox = null;
     lbImg.removeAttribute('src');
     if (opener && document.body.contains(opener)) opener.focus();
@@ -811,12 +802,8 @@
   $('lb-seek').addEventListener('click', function () {
     var lb = state.lightbox;
     if (!lb) return;
-    var f = state.result.violations[lb.vIndex].frames[lb.fIndex];
-    var vIndex = lb.vIndex;
-    lb.opener = null;
-    closeLightbox();
-    seekTo(f.timestamp, vIndex);
-    video.focus({ preventScroll: true });
+    if (lb.playing) showLightboxFrame();
+    else setLightboxVideo(true);
   });
 
   /* ---------- reset ---------- */
