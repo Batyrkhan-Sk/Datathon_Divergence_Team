@@ -3,19 +3,15 @@
 __pycache__/
 *.pyc
 
-# Hackathon data: use is restricted to the hackathon (case FAQ #6). Never commit.
+# Hackathon videos and derived frames: large, and data use is restricted to the
+# hackathon (case FAQ #6). Share through the team drive, never through git.
 data/raw/
 data/frames/
-data/*.xlsx
 *.mov
 *.mp4
 
 # Generated outputs
 out/
-
-# Internal analysis, plan and legal mapping: shared inside the team only
-docs/internal/
-data/rules.json
 
 # Model weights
 weights/
