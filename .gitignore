@@ -1,0 +1,35 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Hackathon data: use is restricted to the hackathon (case FAQ #6). Never commit.
+data/raw/
+data/frames/
+data/*.xlsx
+*.mov
+*.mp4
+
+# Generated outputs
+out/
+
+# Internal analysis, plan and legal mapping: shared inside the team only
+docs/internal/
+data/rules.json
+
+# Model weights
+weights/
+*.pt
+*.pth
+*.onnx
+*.safetensors
+
+# Local env / secrets
+.env
+*.key
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
