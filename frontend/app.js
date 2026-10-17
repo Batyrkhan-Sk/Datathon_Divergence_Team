@@ -384,7 +384,7 @@
     var banner = $('verdict');
     banner.classList.toggle('is-violation', r.isViolation);
     banner.classList.toggle('is-clean', !r.isViolation);
-    var title = r.isViolation ? 'Найдены возможные нарушения' : 'Нарушений не найдено';
+    var title = r.isViolation ? 'Найдены возможные нарушения' : 'Признаков нарушений не обнаружено';
     $('verdict-title').textContent = title;
 
     var meta = [];
@@ -497,7 +497,7 @@
     var fileName = state.file ? state.file.name : '';
     var now = new Date();
     var when = now.toLocaleString('ru-RU');
-    var verdict = r.isViolation ? 'Найдены возможные нарушения' : 'Нарушений не найдено';
+    var verdict = r.isViolation ? 'Найдены возможные нарушения' : 'Признаков нарушений не обнаружено';
     var items = r.violations.map(function (v, i) {
       var rule = v.rule ? (
         '<div class="rule"><div class="rule-title">Нормативное основание</div>' +
