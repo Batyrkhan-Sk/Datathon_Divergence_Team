@@ -54,6 +54,9 @@ def detect(ctx: Context) -> list[Event]:
         t_frame, frame = _frame_at(ctx, dep.t_room_empty + CHECK_AFTER_EMPTY_SEC)
         left = (f"Кассир покинул рабочее место ({dep.t_left_desk:.0f} с) и вышел из "
                 f"помещения ({dep.t_room_empty:.0f} с)")
+        # Evidence: leaving the workstation (onset), walking out, then the state left behind.
+        t_exit = dep.t_room_empty - 1.0
+        exit_frames = [t_exit] if t_exit > dep.t_left_desk + 0.5 else []
 
         desk = _desk_region(dep.teller_box, laptop, w, h)
         desk_level = laptop[1] - 0.25 * (laptop[3] - laptop[1])  # money lies on the desk
@@ -71,8 +74,11 @@ def detect(ctx: Context) -> list[Event]:
             events.append(Event(
                 "cash_unattended", dep.t_left_desk,
                 confidence=min(0.95, 0.55 + money["score"]),
-                observation=f"{left}; на столе без присмотра остались {money['what']}",
-                evidence_times=[tm],
+                # The detector matches object classes, so describe what it looks like rather
+                # than asserting what it is (X-24: green cylinders matched "coin roll").
+                observation=(f"{left}; на столе без присмотра остались предметы, похожие на "
+                             f"ценности ({money['what']})"),
+                evidence_times=exit_frames + [tm],
                 boxes={tm: [(*money["box"], money["what"])]},
             ))
 
@@ -81,7 +87,7 @@ def detect(ctx: Context) -> list[Event]:
                 "workstation_unlocked", dep.t_left_desk, confidence=0.6,
                 observation=f"{left}; экран ноутбука остаётся включённым с открытым "
                             f"рабочим приложением (не заблокирован)",
-                evidence_times=[t_frame],
+                evidence_times=exit_frames + [t_frame],
                 boxes={t_frame: [(*laptop, "экран")]},
             ))
     return events
