@@ -91,8 +91,9 @@ def _follow(people, last_idx, start_idx):
 
 
 def departures(times: list[float], people: list[list[list[float]]],
-               min_empty_sec: float = 1.5, workplace: list[float] | None = None) -> list[Departure]:
-    """Episodes where the room becomes empty (for >= min_empty_sec, or until the end)
+               min_empty_sec: float = 6.0, workplace: list[float] | None = None) -> list[Departure]:
+    """Episodes where the room becomes empty until the video ends, or for >= min_empty_sec
+    (mid-video gaps of a few seconds are usually missed detections, e.g. a new camera angle)
     after someone was present. Onset = when that person stood up / walked off."""
     out = []
     i, n = 0, len(times)

@@ -88,6 +88,9 @@ def main():
     ap.add_argument("--videos", nargs="*")
     ap.add_argument("--layouts", nargs="*")
     ap.add_argument("--tag", default="", help="label for the report file")
+    ap.add_argument("--video-dir", default=str(VIDEOS),
+                    help="folder with the videos, e.g. data/aug/tilt (labels stay the same)")
+    ap.add_argument("--ext", default=".mov", help="video file extension in --video-dir")
     args = ap.parse_args()
 
     labels = load_labels()
@@ -98,7 +101,7 @@ def main():
 
     recs = []
     for lab in labels:
-        result = analyze(str(VIDEOS / f'{lab["video"]}.mov'))
+        result = analyze(str(Path(args.video_dir) / f'{lab["video"]}{args.ext}'))
         rec = score_video(lab, result)
         recs.append(rec)
         mark = "OK " if rec["gt"] == rec["pred"] else ("MISS" if rec["gt"] else "FA ")

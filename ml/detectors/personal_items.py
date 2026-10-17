@@ -16,9 +16,10 @@ DRINK_LABELS = {"cup", "bottle"}
 MIN_SCORE = 0.4
 MIN_SECONDS = 2.0
 # A static, weak "cup" is usually a hand or desk item (clean X-35: hand at the desk edge,
-# max 0.50, box fixed). Accept if confident once, or if the cup moves (drinking, X-46).
+# max 0.50, box fixed). Accept if confident once, or if the cup moves by at least its own
+# height (drinking, X-46).
 STRONG_SCORE = 0.55
-MIN_MOVE_PX = 10
+MIN_MOVE_BOXES = 1.0  # movement relative to the cup size: independent of zoom
 
 
 BELONGINGS_Q = "Is there a coat, jacket, handbag or backpack lying on this desk?"
@@ -96,6 +97,24 @@ def detect(ctx: Context) -> list[Event]:
     return _drinks(ctx) + _belongings(ctx)
 
 
+CUP_Q = "Is there a cup, mug or bottle in this image?"
+CUP_P = 0.5
+
+
+def _vlm_confirms_cup(ctx: Context, span, found) -> bool:
+    """With a zoomed camera the detector can take a hand for a cup with high confidence
+    (X-35 zoom). The VLM looks at a crop around the best detection; without the VLM the
+    detector result stands."""
+    if os.environ.get("ML_USE_VLM") != "1":
+        return True
+    from ..perception import vlm
+    k, d = max(((k, d) for k in span for d in found[k]), key=lambda kd: kd[1]["score"])
+    x1, y1, x2, y2 = d["box"]
+    w, h = x2 - x1, y2 - y1
+    region = [x1 - 1.5 * w, y1 - 1.5 * h, x2 + 1.5 * w, y2 + 1.5 * h]
+    return vlm.p_yes(vlm.crop(ctx.frames[k][1], region, pad=0.0), CUP_Q) >= CUP_P
+
+
 def _drinks(ctx: Context) -> list[Event]:
     times, dets = ctx.extras["times"], ctx.extras["objects"]
     found = [[d for d in f if d["label"] in DRINK_LABELS and d["score"] >= MIN_SCORE]
@@ -106,7 +125,10 @@ def _drinks(ctx: Context) -> list[Event]:
         span = [k for k, t in enumerate(times) if start <= t <= end and found[k]]
         best = max(d["score"] for k in span for d in found[k])
         ys = [(d["box"][1] + d["box"][3]) / 2 for k in span for d in found[k]]
-        if best < STRONG_SCORE and max(ys) - min(ys) < MIN_MOVE_PX:
+        size = float(np.median([d["box"][3] - d["box"][1] for k in span for d in found[k]]))
+        if best < STRONG_SCORE and max(ys) - min(ys) < MIN_MOVE_BOXES * size:
+            continue
+        if not _vlm_confirms_cup(ctx, span, found):
             continue
         i = span[0]
         events.append(Event(

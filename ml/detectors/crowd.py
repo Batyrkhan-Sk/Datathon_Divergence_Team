@@ -13,7 +13,8 @@ from ..events import Event
 from . import Context, register
 
 MIN_PEOPLE = 3
-MIN_SECONDS = 5.0
+MIN_SECONDS = 5.0       # if the crowd lasts until the video ends
+MIN_SECONDS_MID = 7.0   # otherwise (flicker strings together 5-6 s, mirrored X-39)
 # The third person is first counted while still in the doorway; report the moment the
 # entry is complete (X-18: first counted 16 s, walks in ~18 s, label 20 s).
 CROWD_ONSET_SEC = 2.0
@@ -28,7 +29,8 @@ def _solo_room_entries(times, people) -> list[Event]:
         return []
     events = []
     # Shorter minimum when the presence lasts until the video ends (clip cut off, X-33).
-    for start, end in scene.sustained(times, [c >= 2 for c in counts], ENTRY_MIN_AT_END_SEC):
+    for start, end in scene.sustained(times, [c >= 2 for c in counts], ENTRY_MIN_AT_END_SEC,
+                                      max_gap=2):
         if end < times[-1] and end - start < ENTRY_MIN_SECONDS:
             continue
         before = [c for t, c in zip(times, counts) if start - ENTRY_SOLO_BEFORE_SEC <= t < start]
@@ -73,6 +75,8 @@ def detect(ctx: Context) -> list[Event]:
     flags = [len(p) >= MIN_PEOPLE for p in people]
     events = _solo_room_entries(times, people)
     for start, end in scene.sustained(times, flags, MIN_SECONDS):
+        if end < times[-1] and end - start < MIN_SECONDS_MID:
+            continue
         onset = min(end, start + CROWD_ONSET_SEC)
         i = min(range(len(times)), key=lambda k: abs(times[k] - onset))
         events.append(Event(
