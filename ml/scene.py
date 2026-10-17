@@ -52,7 +52,7 @@ STAND_UP_RATIO = 1.35       # box height jump that marks standing up from the ch
 LOOKBACK_SEC = 12.0
 
 
-def _leaving_onset(times, track) -> tuple[int, str]:
+def _leaving_onset(times, track, workplace=None) -> tuple[int, str]:
     """Index where the teller starts leaving. `track` = [(i, box)] of the leaving person,
     oldest first, ending at the last frame before the room is empty."""
     hs = [b[3] - b[1] for _, b in track]
@@ -61,7 +61,13 @@ def _leaving_onset(times, track) -> tuple[int, str]:
         prev = float(np.median(hs[max(0, k - 4):k]))
         if hs[k] >= STAND_UP_RATIO * prev and hs[k - 1] < STAND_UP_RATIO * prev:
             return track[k - 1][0], "stood_up"
-    # 2) already standing: end of the last still period away from the exit position
+    # 2) already standing: last moment at the workstation (near the laptop) before the
+    #    final walk out (X-11: 17.5 s vs label 18; X-15: 15.5 s vs label 15)
+    if workplace is not None:
+        for k in range(len(track) - 2, 0, -1):
+            if near(track[k][1], workplace) and not near(track[k + 1][1], workplace):
+                return track[k][0], "left_workstation"
+    # 3) end of the last still period away from the exit position
     cx = [(b[0] + b[2]) / 2 for _, b in track]
     width = float(np.median([b[2] - b[0] for _, b in track]))
     for k in range(len(track) - 2, 1, -1):
@@ -85,7 +91,7 @@ def _follow(people, last_idx, start_idx):
 
 
 def departures(times: list[float], people: list[list[list[float]]],
-               min_empty_sec: float = 1.5) -> list[Departure]:
+               min_empty_sec: float = 1.5, workplace: list[float] | None = None) -> list[Departure]:
     """Episodes where the room becomes empty (for >= min_empty_sec, or until the end)
     after someone was present. Onset = when that person stood up / walked off."""
     out = []
@@ -105,7 +111,7 @@ def departures(times: list[float], people: list[list[list[float]]],
                 start -= 1
             track = _follow(people, last, start)
             if len(track) >= 4:
-                k, _ = _leaving_onset(times, track)
+                k, _ = _leaving_onset(times, track, workplace)
                 box = next(b for idx, b in track if idx == k)
                 out.append(Departure(times[k], times[i], box))
         i = j

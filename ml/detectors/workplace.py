@@ -50,7 +50,7 @@ def detect(ctx: Context) -> list[Event]:
         return []
     h, w = ctx.info.height, ctx.info.width
     events = []
-    for dep in scene.departures(ctx.extras["times"], ctx.extras["people"]):
+    for dep in scene.departures(ctx.extras["times"], ctx.extras["people"], workplace=laptop):
         t_frame, frame = _frame_at(ctx, dep.t_room_empty + CHECK_AFTER_EMPTY_SEC)
         left = (f"Кассир покинул рабочее место ({dep.t_left_desk:.0f} с) и вышел из "
                 f"помещения ({dep.t_room_empty:.0f} с)")

@@ -9,13 +9,16 @@ The result is a hint for a human reviewer, not a legal conclusion.
 
 ## Project status
 
-*Last updated: 2026-10-17 ~20:30, after eval v10 (deployed). **Deadline:
+*Last updated: 2026-10-17 ~21:40, after eval v12 (deployed). **Deadline:
 2026-10-18 12:00.** This section is updated after every step.*
 
-**Current score (`eval/run_eval.py`, tag `server-v10`, GPU server, VLM on; LIVE):** recall
+**Current score (`eval/run_eval.py`, tag `v12`, GPU server, VLM on; LIVE):** recall
 **15/22**, false alarms **0/20** (unique videos: 14/21 caught, 0/19 false; accuracy 82.5%,
-precision 100%). Timecodes 60% within 2 s (5.4 s mean), type accuracy **64%**, runtime
-**6.9 s average / 21 s worst** per video. For comparison, another team's best end-to-end
+precision 100%). Timecodes **73%** within 2 s (5.1 s mean), type accuracy **79%**, runtime
+**6.7 s average / 21 s worst** per video. v12 vs v10: departure onset uses the last moment at
+the workstation for a standing teller (X-11 18.5 s, X-15 15.0 s); crowd onset = entry complete
+(X-18 18 s). Tried and dropped: "person enters while cash on desk" (4 false alarms: cash on
+the desk during normal client service). For comparison, another team's best end-to-end
 VLM (35B) reached 60% accuracy. v10 vs v8: X-17 now typed as the cash collector's bag (not
 personal items), X-33 timecode fixed (teller arrival onset), short act names in descriptions,
 type names limited to what is visible. Submission document: `docs/SUBMISSION.md`.
@@ -27,7 +30,9 @@ type names limited to what is visible. Submission document: `docs/SUBMISSION.md`
 | v6: + VLM safe and key | 15/22 | 2/20 (key rule) |
 | v7: key rule off, + coat/bag | 15/22 | 2/20 (coat/bag too loose) |
 | v8: coat/bag tightened | 15/22 | 0/20 |
-| **v10: cash bag, arrival onset (LIVE)** | **15/22** | **0/20** (type acc 64%) |
+| v10: cash bag, arrival onset | 15/22 | 0/20 (type acc 64%) |
+| v11: + entry-with-cash detector | 15/22 | **4/20** → dropped |
+| **v12: timecode fixes (LIVE)** | **15/22** | **0/20** (type acc 79%, 73% within 2 s) |
 
 Missed: X-22, X-13 (key left in safe: too small to see), X-32 (door left open), X-34
 (client absent), X-1, X-2, X-44 (types unclear). Timecodes of unauthorized_access are ~4–5 s

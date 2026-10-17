@@ -14,6 +14,9 @@ from . import Context, register
 
 MIN_PEOPLE = 3
 MIN_SECONDS = 5.0
+# The third person is first counted while still in the doorway; report the moment the
+# entry is complete (X-18: first counted 16 s, walks in ~18 s, label 20 s).
+CROWD_ONSET_SEC = 2.0
 ENTRY_MIN_SECONDS = 4.0
 ENTRY_MIN_AT_END_SEC = 2.5
 ENTRY_SOLO_BEFORE_SEC = 3.0
@@ -70,13 +73,14 @@ def detect(ctx: Context) -> list[Event]:
     flags = [len(p) >= MIN_PEOPLE for p in people]
     events = _solo_room_entries(times, people)
     for start, end in scene.sustained(times, flags, MIN_SECONDS):
-        i = times.index(start)
+        onset = min(end, start + CROWD_ONSET_SEC)
+        i = min(range(len(times)), key=lambda k: abs(times[k] - onset))
         events.append(Event(
-            "unauthorized_access", start, t_end=end, confidence=0.6,
+            "unauthorized_access", onset, t_end=end, confidence=0.6,
             observation=(f"В помещении кассы одновременно находятся {len(people[i])} человека "
-                         f"в течение {end - start:.0f} с (с {start:.0f} по {end:.0f} с), "
-                         f"т.е. помимо кассира и клиента присутствует постороннее лицо"),
-            evidence_times=[min(end, start + 2.0)],
-            boxes={start: [(*b, "человек") for b in people[i]]},
+                         f"в течение {end - start:.0f} с (с {start:.0f} по {end:.0f} с): помимо "
+                         f"кассира и клиента в помещении находится ещё как минимум один человек"),
+            evidence_times=[min(end, onset + 1.0)],
+            boxes={times[i]: [(*b, "человек") for b in people[i]]},
         ))
     return events
