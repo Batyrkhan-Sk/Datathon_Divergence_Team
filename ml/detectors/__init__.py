@@ -32,5 +32,5 @@ def register(name: str):
     return wrap
 
 
-# Import detector modules here so they register themselves, e.g.:
-# from . import cash_unattended  # noqa: F401
+# Detector modules register themselves on import.
+from . import crowd, personal_items, workplace  # noqa: E402,F401

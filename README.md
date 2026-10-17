@@ -9,8 +9,18 @@ The result is a hint for a human reviewer, not a legal conclusion.
 
 ## Project status
 
-*Last updated: 2026-10-17, after backend and frontend were built; feasibility test in
-progress. This section is updated after every step.*
+*Last updated: 2026-10-17 ~18:00, after detectors v5 (paused; laptop closed). **Deadline:
+2026-10-18 12:00.** This section is updated after every step.*
+
+**Current score on the 42 training videos (`eval/run_eval.py`, tag v5):** recall **11/22**,
+false alarms **0/20**, timecode error 6.7 s mean (55% within 2 s; the mean is inflated by
+X-4/X-47, see below), type accuracy 55%, runtime 5 s average / 23 s worst (cached
+detections; real GPU timing still to be measured on mains power).
+
+Caught: X-11, X-15, X-24, X-26, X-28 (workplace), X-18, X-30, X-33 (unauthorized), X-46
+(drink). **X-4/X-47 are caught only by a cup seen at 35 s, so their verdict is right but the
+type and timecode are wrong.** Missed: X-1, X-2, X-13, X-17, X-20, X-22, X-32, X-34, X-38,
+X-40, X-44.
 
 ### Done
 | Area | Result | Where |
@@ -26,12 +36,16 @@ progress. This section is updated after every step.*
 | **Backend** | FastAPI. Jury API exactly per the case (`POST /api/v1/analyze`, `GET /api/v1/jobs/{id}`, `X-API-Key` → 401 otherwise); keyless UI routes `/ui/api/...` with a rate limit. One persistent GPU worker plus a queue, a 240 s hard timeout per job, SQLite store, `ANALYZER=real\|demo`, `STRICT_SCHEMA=1` to strip extras. Output repaired defensively (verdict matches violations; 1–3 JPEG frames). **27/27 tests pass; jury contract checker PASS** (incl. 5 concurrent uploads) | `backend/` (see `backend/README.md`) |
 | **Frontend** | Plain HTML/JS/CSS, no build, works offline, Russian UI. Upload → progress → verdict banner → violation cards (type, timecode, description, rule with adilet link, evidence frames with lightbox) → video player with timeline markers. Mock mode `?mock=1`. Tested in headless Chrome, desktop and mobile | `frontend/` (see `frontend/README.md`) |
 | Integration | Backend serves the UI at `/`. UI flow and jury contract checker verified end to end (demo analyzer) | — |
+| Feasibility, detectors | **RT-DETR v2** chosen for people and laptops (best quality, fastest); OWLv2 for text-prompted checks on crops; Grounding DINO rejected (too slow). No detector finds the safe or a key | `docs/internal/feasibility.md` |
+| **First detectors** | `ml/detectors/workplace.py`: teller leaves (stand-up / walk-off onset) → **cash_unattended** (OWLv2 money on desk crop, at desk height, ≥ 2 frames) and **workstation_unlocked** (screen still shows the bright bluish-white app). `ml/detectors/crowd.py`: **≥ 3 people for ≥ 5 s**, or a **second person entering a solo room** (median count 1, stays ≥ 4 s, or ≥ 2.5 s if until video end) → unauthorized_access. `ml/detectors/personal_items.py`: cup/bottle ≥ 2 s that is either confident (≥ 0.55) or moving → personal_items. People seen through or reflected in the glass are filtered by size and position | `ml/` |
+| Dev tooling | `eval/cache_detections.py` caches RT-DETR detections; `ML_OBJECTS_CACHE=out/cache/objects python -m eval.run_eval` reuses them, so a full evaluation takes about 3 min instead of 15 | `eval/` |
+| Data findings | **X-4 = X-47 and X-5 = X-48 are identical files** (40 unique videos; X-4 holds 2 violations at 57 s and 68 s). Labels mark the moment the teller *gets up*, not when she leaves the room | `data/labels.csv` (`duplicate_of`) |
 
 ### Next
 | # | Task | Owner | Why |
 |---|---|---|---|
-| 1 | **Feasibility test** *(in progress)*: which objects off-the-shelf models see reliably; speed and memory on a 4 GB GPU | ML | Decides the model set and whether we must fine-tune |
-| 2 | First detectors, in order of value: `unauthorized_access`, `cash_unattended`, `safe_left_open`, `workstation_unlocked`, `personal_items` | ML | Covers 16 of 22 violation videos |
+| 1 | **More detectors** for the missed videos: X-38 (3 people; the crowd rule misses it), X-4 (person enters while cash on desk, layout A), X-32 (door left open), X-40 (coat and bag on desk: OWLv2 on desk crop), X-20/X-22 (safe: needs VLM), X-34 (client leaves, cash processed), X-47 (hand counting). Also merge same-type events further apart than 3 s (X-46 reports 2) | ML | Recall is 11/22 |
+| 2 | VLM (Qwen3-VL-2B, 4-bit) test and integration: safe / key / cash states, unseen-type checklist, describe the 5 unresolved clips. Weights are downloading slowly (`weights/qwen3-vl-2b/`) | ML | Types no detector can see |
 | 3 | Pipeline fixes from the backend review: add `ml.pipeline.warmup()` (load models at worker start); stream frames instead of `list(iter_frames(...))` (~670 MB RAM for a 143 s video); make `evidence.frames_for` never return 0 frames | ML | Startup time, memory, robustness |
 | 4 | **Time budget:** ≤ ~50 s per video including 143 s clips. The queue runs jobs one at a time, so the 5th of 5 concurrent jury videos waits for the other four | ML | 5-min limit per video |
 | 5 | Leave-one-layout-out evaluation, plus simulated camera angles (perspective warp, flip, zoom) on the training videos | ML | Honest estimate for the new camera angle |

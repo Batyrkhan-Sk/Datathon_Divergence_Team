@@ -60,6 +60,9 @@ MODELS = {
 def build(name):
     from transformers import AutoModelForImageTextToText, AutoProcessor
     mid, four_bit = MODELS[name]
+    local = ROOT / "weights" / mid.split("/")[1].lower().replace("-instruct", "")
+    if local.exists():  # pre-downloaded copy, e.g. weights/qwen3-vl-2b
+        mid = str(local)
     kwargs = {"device_map": "cuda:0"}
     if four_bit:
         from transformers import BitsAndBytesConfig

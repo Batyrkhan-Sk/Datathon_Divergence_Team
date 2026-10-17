@@ -3,16 +3,19 @@
     python -m ml.pipeline data/raw/X-26.mov          # prints JSON (images truncated)
 """
 import json
+import os
 import sys
 import time
+from pathlib import Path
 from typing import Callable
 
-from . import catalog, evidence
+from . import catalog, evidence, scene
 from .detectors import DETECTORS, Context
 from .events import Event
+from .perception import objects, zeroshot
 from .video import iter_frames, probe
 
-SAMPLE_FPS = 4.0
+SAMPLE_FPS = 2.0
 MIN_CONFIDENCE = 0.5      # tune on eval; keep low — a missed violation is worse than a FP
 MERGE_WINDOW_SEC = 3.0    # same-type events closer than this are one violation
 
@@ -39,6 +42,32 @@ def _describe(event: Event, rule: dict | None) -> str:
     return text
 
 
+def warmup() -> None:
+    """Load all models once (called by the backend worker at start-up)."""
+    objects.warmup()
+    zeroshot.warmup()
+
+
+def _cached_objects(ctx: Context) -> list[list[dict]] | None:
+    """Development shortcut: reuse detections from eval/cache_detections.py when the
+    env var ML_OBJECTS_CACHE points to that folder. Never set in production."""
+    folder = os.environ.get("ML_OBJECTS_CACHE")
+    path = Path(folder) / f"{Path(ctx.info.path).stem}.json" if folder else None
+    if not path or not path.exists():
+        return None
+    cached = json.loads(path.read_text(encoding="utf-8"))["frames"]
+    return [min(cached, key=lambda f: abs(f["t"] - t))["dets"] for t, _ in ctx.frames]
+
+
+def perceive(ctx: Context) -> None:
+    """Shared perception for all detectors, stored in ctx.extras."""
+    dets = _cached_objects(ctx) or objects.detect([f for _, f in ctx.frames])
+    ctx.extras["times"] = [t for t, _ in ctx.frames]
+    ctx.extras["objects"] = dets
+    ctx.extras["people"] = [scene.people_in_room(d, ctx.info.height) for d in dets]
+    ctx.extras["laptop"] = scene.laptop_box(dets)
+
+
 def analyze(video_path: str, progress: Callable[[float], None] | None = None,
             rules_path: str | None = None) -> dict:
     started = time.time()
@@ -48,6 +77,8 @@ def analyze(video_path: str, progress: Callable[[float], None] | None = None,
     report(0.05)
     frames = list(iter_frames(video_path, SAMPLE_FPS))
     ctx = Context(info=info, frames=frames)
+    report(0.15)
+    perceive(ctx)
     report(0.3)
 
     events: list[Event] = []
