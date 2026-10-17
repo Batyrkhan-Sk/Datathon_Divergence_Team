@@ -9,14 +9,16 @@ The result is a hint for a human reviewer, not a legal conclusion.
 
 ## Project status
 
-*Last updated: 2026-10-17 ~20:00, after eval v8 on the GPU server. **Deadline:
+*Last updated: 2026-10-17 ~20:30, after eval v10 (deployed). **Deadline:
 2026-10-18 12:00.** This section is updated after every step.*
 
-**Current score (`eval/run_eval.py`, tag `server-v8`, GPU server, VLM on):** recall
+**Current score (`eval/run_eval.py`, tag `server-v10`, GPU server, VLM on; LIVE):** recall
 **15/22**, false alarms **0/20** (unique videos: 14/21 caught, 0/19 false; accuracy 82.5%,
-precision 100%). Timecode error 5.6 s mean (53% within 2 s), type accuracy 57%, runtime
-**6.8 s average / 21 s worst** per video. For comparison, another team's best end-to-end
-VLM (35B) reached 60% accuracy.
+precision 100%). Timecodes 60% within 2 s (5.4 s mean), type accuracy **64%**, runtime
+**6.9 s average / 21 s worst** per video. For comparison, another team's best end-to-end
+VLM (35B) reached 60% accuracy. v10 vs v8: X-17 now typed as the cash collector's bag (not
+personal items), X-33 timecode fixed (teller arrival onset), short act names in descriptions,
+type names limited to what is visible. Submission document: `docs/SUBMISSION.md`.
 
 | Version | Caught | False alarms |
 |---|---|---|
@@ -24,7 +26,8 @@ VLM (35B) reached 60% accuracy.
 | Server, detectors only | 12/22 | 0/20 |
 | v6: + VLM safe and key | 15/22 | 2/20 (key rule) |
 | v7: key rule off, + coat/bag | 15/22 | 2/20 (coat/bag too loose) |
-| **v8: coat/bag tightened** | **15/22** | **0/20** |
+| v8: coat/bag tightened | 15/22 | 0/20 |
+| **v10: cash bag, arrival onset (LIVE)** | **15/22** | **0/20** (type acc 64%) |
 
 Missed: X-22, X-13 (key left in safe: too small to see), X-32 (door left open), X-34
 (client absent), X-1, X-2, X-44 (types unclear). Timecodes of unauthorized_access are ~4–5 s
@@ -52,7 +55,7 @@ off (X-18, X-33, X-38), which costs type accuracy. X-4/X-47 are flagged via a cu
 | VLM result (8B) | Qwen3-VL-8B (bf16, GPU server): **12/16** checks, 0.17 s per question, 16.5 GB. Full-frame answers are noisy (confuses the open room door with the safe door), so all VLM use is on **crops** with multi-sample consistency | `out/feasibility/qwen3vl8b/` (server) |
 | Safe detector (VLM) | `ml/detectors/safe.py`: VLM locates the safe once, then every 2 s asks "door open?" on an enlarged crop. **Open ≥ 6 s** → safe_left_open (X-20 caught at 4 s vs label 5 s, no false alarms). **Key left in the lock is not detectable**: a few pixels; single and before/after questions failed, and the behaviour rule also fired on clean X-12/X-25, so it is off (`ML_SAFE_KEY_RULE=1` to enable) | `ml/detectors/safe.py` |
 | Coat/bag on desk (VLM) | `personal_items.py`: VLM on the desk crop every 3 s; item must be absent at the start and then seen with p ≥ 0.9 for ≥ 3 samples (or ≥ 2 until the end). Catches X-40 (and the cash bag in X-17), no false alarms | `ml/detectors/personal_items.py` |
-| Deployment prep | `deploy/run_server.sh` (service on GPU 1, VLM on, offline, localhost only) and `deploy/run_tunnel.sh` (Cloudflare Tunnel). Jury API key generated and stored in the server's project `.env` | `deploy/` |
+| **Deployment (LIVE)** | Service on the GPU server (GPU 1, VLM on, offline weights, localhost only) behind a Cloudflare quick tunnel: **https://spouse-hide-belongs-placing.trycloudflare.com** (UI at `/`, API at `/api/v1/...`). The jury API key is only in the server's project `.env` (ask the team lead). **Jury contract checker PASS over the public URL** (X-26 → violation in 14.5 s, X-29 → no_violation in 7.4 s). The quick-tunnel URL changes if the tunnel restarts | `deploy/`, server `logs/service.log`, `logs/tunnel.log` |
 | Dev tooling | `eval/cache_detections.py` caches RT-DETR detections; `ML_OBJECTS_CACHE=out/cache/objects python -m eval.run_eval` reuses them, so a full evaluation takes about 3 min instead of 15 | `eval/` |
 | Data findings | **X-4 = X-47 and X-5 = X-48 are identical files** (40 unique videos; X-4 holds 2 violations at 57 s and 68 s). Labels mark the moment the teller *gets up*, not when she leaves the room | `data/labels.csv` (`duplicate_of`) |
 

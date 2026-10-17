@@ -38,6 +38,7 @@ def citation(type_id: str, rules_path: str | None = None) -> dict | None:
     doc = cat["documents"][src["doc"]]
     return {
         "document": f'{doc["title"]} ({doc["act"]})',
+        "short": doc.get("short", doc["title"]),
         "clause": src["clause"],
         "quote": src["quote"],
         "url": doc["url"],

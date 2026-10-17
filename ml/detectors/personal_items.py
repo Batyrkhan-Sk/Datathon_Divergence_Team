@@ -29,6 +29,10 @@ BELONGINGS_SAMPLE_SEC = 3.0
 BELONGINGS_MIN_HITS = 3     # consecutive samples ...
 BELONGINGS_MIN_HITS_AT_END = 2  # ... or fewer if they run to the end of the video
 BELONGINGS_BASELINE = 2     # first samples must be clear: the item has to *appear*
+# Cash-collection bags here are green sacks. Long, specific wording scored 0 on X-17; the
+# simple question separates X-17 (1.0) from the coat and handbag in X-40 (0.0).
+CASH_BAG_Q = "Is there a green bag on the desk?"
+CASH_BAG_P = 0.6
 
 
 def _desk_crop_box(ctx: Context):
@@ -64,13 +68,25 @@ def _belongings(ctx: Context) -> list[Event]:
             run += 1
         to_end = k + run == len(samples)
         if run >= BELONGINGS_MIN_HITS or (to_end and run >= BELONGINGS_MIN_HITS_AT_END):
-            t = samples[k][0]
+            t, t_ev = samples[k][0], samples[k + 1][0]
+            frame = min(ctx.frames, key=lambda tf: abs(tf[0] - t_ev))[1]
+            # A cash-collection bag is not a personal item (X-17): report it as a collector
+            # handover and describe only what is visible.
+            if vlm.p_yes(vlm.crop(frame, box, pad=0.0), CASH_BAG_Q) >= CASH_BAG_P:
+                return [Event(
+                    "collector_handover", t, confidence=0.55,
+                    observation=(f"С {t:.0f} с на столе кассира лежит сумка, по виду "
+                                 f"инкассаторская; проверьте по записи, осмотрены ли целостность "
+                                 f"сумки и пломба"),
+                    evidence_times=[t_ev],
+                    boxes={t_ev: [(*box, "сумка")]},
+                )]
             return [Event(
                 "personal_items", t, confidence=0.6,
-                observation=(f"С {t:.0f} с на кассовом столе лежат личные вещи (верхняя одежда "
-                             f"и/или сумка), которых не было в начале записи"),
-                evidence_times=[samples[k + 1][0]],
-                boxes={samples[k + 1][0]: [(*box, "личные вещи")]},
+                observation=(f"С {t:.0f} с на кассовом столе лежат вещи, похожие на личные "
+                             f"(верхняя одежда и/или сумка), которых не было в начале записи"),
+                evidence_times=[t_ev],
+                boxes={t_ev: [(*box, "личные вещи")]},
             )]
     return []
 

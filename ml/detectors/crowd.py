@@ -32,14 +32,36 @@ def _solo_room_entries(times, people) -> list[Event]:
         if not before or max(before) >= 2 or sum(before) == 0:
             continue  # not an entry: two people already there, or nobody before
         i = times.index(start)
+        arrived = _teller_arrival(times, counts, start)
+        if arrived is not None:
+            # Room was empty at the start: the teller came in and the door stayed passable,
+            # so the violation starts at her arrival (X-33: label 6 s, outsider at 10.5 s).
+            onset = arrived
+            text = (f"Кассир вошла в помещение кассы ({arrived:.0f} с), после чего в помещение "
+                    f"вошло второе лицо ({start:.0f} с) и находилось там {end - start:.0f} с: "
+                    f"вход в кассу не был закрыт")
+        else:
+            onset = start
+            text = (f"Во время работы кассира в помещение кассы вошло второе лицо "
+                    f"({start:.0f} с) и находилось там {end - start:.0f} с")
         events.append(Event(
-            "unauthorized_access", start, t_end=end, confidence=0.55,
-            observation=(f"Во время работы кассира в помещение кассы вошло второе лицо "
-                         f"({start:.0f} с) и находилось там {end - start:.0f} с"),
-            evidence_times=[min(end, start + 2.0)],
+            "unauthorized_access", onset, t_end=end, confidence=0.55, observation=text,
+            evidence_times=[start, min(end, start + 2.0)],
             boxes={start: [(*b, "человек") for b in people[i]]},
         ))
     return events
+
+
+def _teller_arrival(times, counts, before):
+    """If the room is empty at the start (>= 1.5 s, so one missed detection does not count),
+    the time the first person settles in (present for >= 2 s) before `before`; else None."""
+    empty_start = [c == 0 for t, c in zip(times, counts) if t - times[0] < 1.5]
+    if not empty_start or not all(empty_start):
+        return None
+    for start, end in scene.sustained(times, [c >= 1 for c in counts], 2.0):
+        if start < before:
+            return start
+    return None
 
 
 @register("crowd")

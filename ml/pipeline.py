@@ -38,7 +38,7 @@ def _describe(event: Event, rule: dict | None) -> str:
     if not text.endswith("."):
         text += "."
     if rule:
-        text += f' Возможное нарушение: {rule["document"]}, {rule["clause"]}.'
+        text += f' Возможное нарушение: {rule.get("short", rule["document"])}, {rule["clause"]}.'
     return text
 
 
