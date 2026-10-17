@@ -39,6 +39,9 @@ while true; do
   if ! alive logs/tunnel.pid; then
     start_tunnel; sleep 20
   fi
+  # Uploaded videos are kept only for processing: delete anything older than 24 h
+  # (the service itself only cleans up at start-up, and it runs continuously).
+  find backend/storage/uploads -type f -mmin +1440 -delete 2>/dev/null
   url=$(grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' logs/tunnel.log | tail -1)
   if [ -n "$url" ] && [ "$url" != "$(cat logs/public_url.txt 2>/dev/null)" ]; then
     echo "$url" > logs/public_url.txt
