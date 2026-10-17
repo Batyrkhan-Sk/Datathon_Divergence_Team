@@ -13,6 +13,9 @@ from . import Context, register
 
 # Money must be seen in >= 2 of the checked frames (score >= MONEY_HIT), or once strongly.
 MONEY_HIT = 0.08
+# Without a laptop the desk zone is only estimated from the teller's position, so it is
+# wider and less certain: weak hits there are not enough (clean X-23: 0.09 at the zone edge).
+MONEY_HIT_NO_LAPTOP = 0.15
 MONEY_STRONG = 0.25
 MONEY_CHECK_OFFSETS = (0.5, 1.5, 2.5)   # seconds after the room became empty
 # Unlocked screen = bright, bluish-white working app (spreadsheet). Calibrated on X-28/X-11
@@ -45,12 +48,15 @@ def screen_unlocked(frame, laptop) -> bool:
 
 @register("workplace")
 def detect(ctx: Context) -> list[Event]:
+    # Workplace = the laptop, or (no laptop in view, e.g. another camera angle) where the
+    # teller sits most of the time. The screen check needs a real laptop.
     laptop = ctx.extras.get("laptop")
-    if laptop is None:
+    anchor = ctx.extras.get("workplace") or laptop
+    if anchor is None:
         return []
     h, w = ctx.info.height, ctx.info.width
     events = []
-    for dep in scene.departures(ctx.extras["times"], ctx.extras["people"], workplace=laptop):
+    for dep in scene.departures(ctx.extras["times"], ctx.extras["people"], workplace=anchor):
         t_frame, frame = _frame_at(ctx, dep.t_room_empty + CHECK_AFTER_EMPTY_SEC)
         left = (f"Кассир покинул рабочее место ({dep.t_left_desk:.0f} с) и вышел из "
                 f"помещения ({dep.t_room_empty:.0f} с)")
@@ -58,8 +64,12 @@ def detect(ctx: Context) -> list[Event]:
         t_exit = dep.t_room_empty - 1.0
         exit_frames = [t_exit] if t_exit > dep.t_left_desk + 0.5 else []
 
-        desk = _desk_region(dep.teller_box, laptop, w, h)
-        desk_level = laptop[1] - 0.25 * (laptop[3] - laptop[1])  # money lies on the desk
+        desk = _desk_region(dep.teller_box, anchor, w, h)
+        if laptop is not None:
+            desk_level = laptop[1] - 0.25 * (laptop[3] - laptop[1])  # money lies on the desk
+        else:  # seated teller: the desk top is roughly at mid-torso
+            desk_level = anchor[1] + 0.5 * (anchor[3] - anchor[1])
+        min_hit = MONEY_HIT if laptop is not None else MONEY_HIT_NO_LAPTOP
         hits, seen = [], set()
         for off in MONEY_CHECK_OFFSETS:
             tm, fm = _frame_at(ctx, dep.t_room_empty + off)
@@ -67,7 +77,7 @@ def detect(ctx: Context) -> list[Event]:
                 continue
             seen.add(tm)
             m = zeroshot.find_money(fm, desk)
-            if m and m["score"] >= MONEY_HIT and (m["box"][1] + m["box"][3]) / 2 >= desk_level:
+            if m and m["score"] >= min_hit and (m["box"][1] + m["box"][3]) / 2 >= desk_level:
                 hits.append((tm, m))
         if hits and (len(hits) >= 2 or max(m["score"] for _, m in hits) >= MONEY_STRONG):
             tm, money = max(hits, key=lambda h: h[1]["score"])
@@ -82,7 +92,7 @@ def detect(ctx: Context) -> list[Event]:
                 boxes={tm: [(*money["box"], money["what"])]},
             ))
 
-        if screen_unlocked(frame, laptop):
+        if laptop is not None and screen_unlocked(frame, laptop):
             events.append(Event(
                 "workstation_unlocked", dep.t_left_desk, confidence=0.6,
                 observation=f"{left}; экран ноутбука остаётся включённым с открытым "

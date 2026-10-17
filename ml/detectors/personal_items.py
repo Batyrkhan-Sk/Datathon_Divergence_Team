@@ -37,7 +37,7 @@ CASH_BAG_P = 0.6
 
 
 def _desk_crop_box(ctx: Context):
-    laptop = ctx.extras.get("laptop")
+    laptop = ctx.extras.get("workplace") or ctx.extras.get("laptop")
     boxes = [max(p, key=lambda b: (b[2] - b[0]) * (b[3] - b[1])) for p in ctx.extras["people"] if p]
     if laptop is None or not boxes:
         return None

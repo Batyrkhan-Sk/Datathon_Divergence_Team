@@ -30,6 +30,24 @@ def laptop_box(per_frame: list[list[dict]]) -> list[float] | None:
     return np.median(np.array(boxes), axis=0).tolist() if boxes else None
 
 
+def teller_anchor(people: list[list[list[float]]], width: int, height: int) -> list[float] | None:
+    """Fallback workplace when no laptop is visible: where a person stays for most of the
+    video (the teller works there; clients and visitors come and go). Box centres are
+    binned on a coarse grid; the most visited cell wins and its boxes are averaged."""
+    cell_w, cell_h = width / 6, height / 8
+    bins: dict[tuple[int, int], list[list[float]]] = {}
+    for frame in people:
+        for b in frame:
+            cx, cy = (b[0] + b[2]) / 2, (b[1] + b[3]) / 2
+            bins.setdefault((int(cx // cell_w), int(cy // cell_h)), []).append(b)
+    if not bins:
+        return None
+    best = max(bins.values(), key=len)
+    if len(best) < 4:  # less than ~2 s of presence: no stable workplace
+        return None
+    return np.median(np.array(best), axis=0).tolist()
+
+
 def _center(b):
     return (b[0] + b[2]) / 2, (b[1] + b[3]) / 2
 

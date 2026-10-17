@@ -415,6 +415,7 @@
   // Colours match the boxes drawn by the server (ml/pipeline.py SCENE_COLORS, BGR there).
   var SCENE_COLORS = {
     'Рабочее место (ноутбук)': 'rgb(60,180,60)',
+    'Рабочее место (по положению кассира)': 'rgb(60,180,60)',
     'Зона стола': 'rgb(40,140,220)',
     'Сейф': 'rgb(255,140,0)',
     'Человек': 'rgb(150,150,150)'

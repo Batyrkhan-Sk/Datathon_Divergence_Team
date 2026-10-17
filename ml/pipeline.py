@@ -20,7 +20,7 @@ from .video import iter_frames, probe
 
 SAMPLE_FPS = 2.0
 MIN_CONFIDENCE = 0.5      # tune on eval; keep low — a missed violation is worse than a FP
-MERGE_WINDOW_SEC = 3.0    # same-type events closer than this are one violation
+MERGE_WINDOW_SEC = 8.0    # same-type events closer than this are one violation (X-46: 10.5 + 16 s)
 
 
 def _merge(events: list[Event]) -> list[Event]:
@@ -72,6 +72,16 @@ def perceive(ctx: Context) -> None:
     ctx.extras["objects"] = dets
     ctx.extras["people"] = [scene.people_in_room(d, ctx.info.height) for d in dets]
     ctx.extras["laptop"] = scene.laptop_box(dets)
+    if os.environ.get("ML_IGNORE_LAPTOP") == "1":  # test switch: simulate a hidden laptop
+        ctx.extras["laptop"] = None
+    # Workplace anchor: the laptop if visible, otherwise where the teller sits most of the
+    # time (a new camera angle may hide the laptop; detectors must keep working).
+    if ctx.extras["laptop"] is not None:
+        ctx.extras["workplace"], ctx.extras["workplace_source"] = ctx.extras["laptop"], "laptop"
+    else:
+        ctx.extras["workplace"] = scene.teller_anchor(ctx.extras["people"], ctx.info.width,
+                                                      ctx.info.height)
+        ctx.extras["workplace_source"] = "teller" if ctx.extras["workplace"] else None
 
 
 def analyze(video_path: str, progress: Callable[[float], None] | None = None,
@@ -120,7 +130,8 @@ def analyze(video_path: str, progress: Callable[[float], None] | None = None,
     return result
 
 
-SCENE_COLORS = {"Рабочее место (ноутбук)": (60, 180, 60), "Зона стола": (220, 140, 40),
+SCENE_COLORS = {"Рабочее место (ноутбук)": (60, 180, 60),
+                "Рабочее место (по положению кассира)": (60, 180, 60), "Зона стола": (220, 140, 40),
                 "Сейф": (0, 140, 255), "Человек": (230, 230, 230)}
 
 
@@ -138,6 +149,8 @@ def _scene(ctx: Context) -> dict | None:
     objects = []
     if ctx.extras.get("laptop"):
         objects.append(("Рабочее место (ноутбук)", ctx.extras["laptop"]))
+    elif ctx.extras.get("workplace"):
+        objects.append(("Рабочее место (по положению кассира)", ctx.extras["workplace"]))
     desk = _desk_crop_box(ctx)
     if desk:
         objects.append(("Зона стола", desk))
