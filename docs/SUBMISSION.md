@@ -10,15 +10,15 @@ AI-сервис анализирует видеозапись рабочего �
 
 | | |
 |---|---|
-| Веб-интерфейс | `<URL>` (передаётся в форме сдачи) |
-| API | `<URL>/api/v1/analyze` (POST), `<URL>/api/v1/jobs/{job_id}` (GET) |
+| Веб-интерфейс | https://eggbeater-stardom-unsaid.ngrok-free.dev (при первом открытии в браузере ngrok показывает страницу-предупреждение — нажать «Visit Site») |
+| API | `https://eggbeater-stardom-unsaid.ngrok-free.dev/api/v1/analyze` (POST), `https://eggbeater-stardom-unsaid.ngrok-free.dev/api/v1/jobs/{job_id}` (GET) |
 | Ключ API | передаётся в форме сдачи; заголовок `X-API-Key` |
 
 Запрос без верного ключа отклоняется (HTTP 401). Пример:
 
 ```bash
-curl -X POST <URL>/api/v1/analyze -H "X-API-Key: <ключ>" -F "file=@video.mov"
-curl <URL>/api/v1/jobs/<job_id> -H "X-API-Key: <ключ>"
+curl -X POST https://eggbeater-stardom-unsaid.ngrok-free.dev/api/v1/analyze -H "X-API-Key: <ключ>" -F "file=@video.mov"
+curl https://eggbeater-stardom-unsaid.ngrok-free.dev/api/v1/jobs/<job_id> -H "X-API-Key: <ключ>"
 ```
 
 Ответ соответствует схеме из ТЗ: `job_id`, `status` (`processing|done|failed`), `verdict`

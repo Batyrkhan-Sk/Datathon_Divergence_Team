@@ -15,7 +15,13 @@ start_tunnel() {
   setsid bash deploy/run_tunnel.sh >> logs/tunnel.log 2>&1 < /dev/null &
   echo $! > logs/tunnel.pid
 }
+start_ngrok() {
+  echo "$(date '+%F %T') starting ngrok"
+  setsid bash deploy/run_ngrok.sh >> logs/ngrok.log 2>&1 < /dev/null &
+  echo $! > logs/ngrok.pid
+}
 alive() { [ -f "$1" ] && kill -0 "$(cat "$1")" 2>/dev/null; }
+use_ngrok() { grep -q '^NGROK_AUTHTOKEN=' .env 2>/dev/null; }
 
 while true; do
   # Service: process alive and health endpoint answering (allow ~2 min for model loading)
@@ -25,7 +31,11 @@ while true; do
     echo "$(date '+%F %T') health check failed; restarting service"
     kill "$(cat logs/service.pid)" 2>/dev/null; sleep 5; start_service; sleep 120
   fi
-  # Tunnel: process alive; record the public URL whenever it changes
+  # ngrok: fixed public URL (primary) when configured
+  if use_ngrok && ! alive logs/ngrok.pid; then
+    start_ngrok; sleep 10
+  fi
+  # Cloudflare quick tunnel: backup; record its URL whenever it changes
   if ! alive logs/tunnel.pid; then
     start_tunnel; sleep 20
   fi
