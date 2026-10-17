@@ -7,21 +7,12 @@ explanation, and a reference to the relevant regulation of the Republic of Kazak
 
 The result is a hint for a human reviewer, not a legal conclusion.
 
+**Live service:** https://eggbeater-stardom-unsaid.ngrok-free.dev — web UI at `/`, jury API at
+`/api/v1/analyze` and `/api/v1/jobs/{id}` (header `X-API-Key`). Details: `docs/SUBMISSION.md`.
+
 ## Project status
 
-*Last updated: 2026-10-18, after v19 (frame timestamps fix from the format stress test; deployed at the fixed ngrok URL). Presentation draft: claude.ai artifact (English). **Deadline:
-2026-10-18 12:00.** This section is updated after every step.*
-
-**Current score (`eval/run_eval.py`, tag `v12`, GPU server, VLM on; LIVE):** recall
-**15/22**, false alarms **0/20** (unique videos: 14/21 caught, 0/19 false; accuracy 82.5%,
-precision 100%). Timecodes **73%** within 2 s (5.1 s mean), type accuracy **79%**, runtime
-**6.7 s average / 21 s worst** per video. v12 vs v10: departure onset uses the last moment at
-the workstation for a standing teller (X-11 18.5 s, X-15 15.0 s); crowd onset = entry complete
-(X-18 18 s). Tried and dropped: "person enters while cash on desk" (4 false alarms: cash on
-the desk during normal client service). For comparison, another team's best end-to-end
-VLM (35B) reached 60% accuracy. v10 vs v8: X-17 now typed as the cash collector's bag (not
-personal items), X-33 timecode fixed (teller arrival onset), short act names in descriptions,
-type names limited to what is visible. Submission document: `docs/SUBMISSION.md`.
+**Current score (`eval/run_eval.py`, v19, GPU server, VLM on; LIVE):** recall **13/22**, false alarms **0/20** (unique videos: 13/21 caught, 0/19 false; accuracy 80%, precision 100%). Timecodes **92%** within 2 s, type accuracy **92%**, about 6 s per video. Submission document: `docs/SUBMISSION.md`.
 
 | Version | Caught | False alarms |
 |---|---|---|
@@ -42,9 +33,7 @@ type names limited to what is visible. Submission document: `docs/SUBMISSION.md`
 | **v19 (LIVE): real frame timestamps** | **13/22** | **0/20**; timecodes within 2 s 85% → **92%**. Format stress test (15 variants via the API: HEVC, rotation flag, variable fps, 60 fps, 1080p, 4K 12 s, landscape, 4-min video 34 s, .mp4, Cyrillic name, 3 s clip): all processed, same verdict and type. Found: variable frame rate shifted timecodes (10.0 → 6.5 s); fixed by sampling on frame timestamps (`ml/video.py`), duration from ffprobe |
 
 Missed: X-22, X-13 (key left in safe: too small to see), X-32 (door left open), X-34
-(client absent), X-1, X-2, X-44 (types unclear). Timecodes of unauthorized_access are ~4–5 s
-off (X-18, X-33, X-38), which costs type accuracy. X-4/X-47 are flagged via a cup at 35 s
-(right verdict, wrong type).
+(client absent), X-1, X-44, X-4 = X-47 (counting cash by hand), X-2 (type unclear).
 
 ### Done
 | Area | Result | Where |
