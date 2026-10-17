@@ -108,13 +108,6 @@ a { color: var(--accent); }
 
 main { flex: 1; padding-top: 32px; padding-bottom: 48px; }
 
-.app-footer {
-  border-top: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--muted);
-  font-size: .85rem;
-  padding: 16px 0;
-}
 
 /* ---------- buttons ---------- */
 
@@ -286,8 +279,7 @@ main { flex: 1; padding-top: 32px; padding-bottom: 48px; }
   position: relative; display: inline-flex; align-items: center; gap: 4px;
   color: var(--muted); cursor: help; border-radius: 4px;
 }
-.info-tip svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
-.info-tip-label { text-decoration: underline dotted; text-underline-offset: 3px; }
+.info-tip svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
 .info-tip:hover, .info-tip:focus-visible { color: var(--text); }
 .tip {
   position: absolute; left: 0; top: calc(100% + 8px); z-index: 20;
@@ -575,7 +567,7 @@ main { flex: 1; padding-top: 32px; padding-bottom: 48px; }
 }
 
 @media print {
-  .app-header, .app-footer, .verdict-actions, .player-col, .lightbox { display: none !important; }
+  .app-header, .verdict-actions, .player-col, .lightbox { display: none !important; }
   .result-grid { display: block; }
   .finding-card { box-shadow: none; break-inside: avoid; }
   .rule-quote blockquote { display: block; }

@@ -3,6 +3,8 @@
 Citations are only ever copied from this file, never generated.
 """
 import json
+import re
+import urllib.parse
 from functools import lru_cache
 from pathlib import Path
 
@@ -28,6 +30,22 @@ def type_name(type_id: str, rules_path: str | None = None) -> str:
     return t["name"] if t else "Иное возможное нарушение"
 
 
+FRAGMENT_WORDS = 8
+
+
+def deep_link(url: str, quote: str) -> str:
+    """Link that opens the act at the quoted clause: a text fragment (#:~:text=...) makes
+    Chrome, Edge, Safari and Firefox scroll to and highlight the first words of the quote;
+    other browsers just open the act. adilet has no stable per-clause URLs."""
+    text = re.sub(r"[«»\"…]|\.\.\.", " ", quote or "")
+    # A fragment cannot span list items (sub-points end with ";"): keep the first one.
+    first = text.split(";")[0]
+    words = (first if len(first.split()) >= 3 else text).split()[:FRAGMENT_WORDS]
+    if not url or len(words) < 3:
+        return url
+    return url + "#:~:text=" + urllib.parse.quote(" ".join(words), safe="")
+
+
 def citation(type_id: str, rules_path: str | None = None) -> dict | None:
     """Primary rule for a type: {document, clause, quote, url}."""
     cat = load(rules_path)
@@ -41,5 +59,5 @@ def citation(type_id: str, rules_path: str | None = None) -> dict | None:
         "short": doc.get("short", doc["title"]),
         "clause": src["clause"],
         "quote": src["quote"],
-        "url": doc["url"],
+        "url": deep_link(doc["url"], src["quote"]),
     }

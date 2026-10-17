@@ -123,11 +123,10 @@
         <div class="verdict-text">
           <h1 id="verdict-title" tabindex="-1"></h1>
           <p class="verdict-meta"><span id="verdict-meta"></span>
-            <span class="info-tip" tabindex="0" aria-describedby="disclaimer">
+            <span class="info-tip" tabindex="0" aria-label="О результате" aria-describedby="disclaimer">
               <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="7.5"/><path d="M10 9v4.5m0-7v.4"/></svg>
-              <span class="info-tip-label">О результате</span>
               <span class="tip" id="disclaimer" role="tooltip">Результат — подсказка для проверяющего
-                сотрудника, а не окончательное юридическое или дисциплинарное заключение.<span id="disclaimer-extra">
+                сотрудника и не является окончательным юридическим или дисциплинарным заключением.<span id="disclaimer-extra">
                 Каждый эпизод нужно проверить по записи.</span></span>
             </span>
           </p>
@@ -177,12 +176,6 @@
       </div>
     </section>
   </main>
-
-  <footer class="app-footer">
-    <div class="container">
-      <p>Анализ выполняется локально на сервере сервиса, без облачных AI-сервисов. Распознавание лиц не используется.</p>
-    </div>
-  </footer>
 
   <!-- Evidence frame viewer -->
   <dialog class="lightbox" id="lightbox" aria-labelledby="lightbox-caption">

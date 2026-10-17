@@ -443,7 +443,7 @@
           type: 'button', class: 'check-seek',
           'aria-label': c.label + ': перейти к эпизоду ' + (vIndex + 1) + ', ' + Fmt.formatTimecode(c.timecode),
           text: Fmt.formatTimecode(c.timecode),
-          onclick: function () { seekTo(c.timecode, vIndex); }
+          onclick: function () { seekTo(c.timecode, vIndex, true); }
         });
       } else {
         status = document.createTextNode(CHECK_STATUS[c.status]);
@@ -504,7 +504,7 @@
         (v.rule.document ? '<p>' + esc(v.rule.document) + '</p>' : '') +
         (v.rule.clause ? '<p><b>Пункт:</b> ' + esc(v.rule.clause) + '</p>' : '') +
         (v.rule.quote ? '<blockquote>' + esc(v.rule.quote) + '</blockquote>' : '') +
-        (v.rule.url ? '<p><a href="' + esc(v.rule.url) + '">' + esc(v.rule.url) + '</a></p>' : '') +
+        (v.rule.url ? '<p><a href="' + esc(v.rule.url) + '">Открыть норму на ' + esc(Fmt.hostOf(v.rule.url)) + '</a></p>' : '') +
         '</div>') : '';
       var frames = v.frames.map(function (f) {
         return '<figure><img src="' + esc(f.src) + '" alt=""><figcaption>' +
@@ -550,8 +550,8 @@
       '<div class="verdict ' + (r.isViolation ? 'v-bad' : 'v-ok') + '">' + esc(verdict) +
       (r.isViolation ? ' · Эпизодов: ' + r.violations.length : '') + '</div>' +
       items + checks + scene +
-      '<p class="note">Результат — подсказка для проверяющего сотрудника, а не окончательное юридическое ' +
-      'или дисциплинарное заключение. Каждый эпизод нужно проверить по записи.</p></body></html>';
+      '<p class="note">Результат — подсказка для проверяющего сотрудника и не является окончательным ' +
+      'юридическим или дисциплинарным заключением. Каждый эпизод нужно проверить по записи.</p></body></html>';
   }
 
   function downloadReport() {
@@ -583,8 +583,8 @@
         type: 'button',
         class: 'timecode-btn',
         'data-seek': String(v.timecode),
-        'aria-label': 'Перейти к моменту ' + tc + ' в видео',
-        onclick: function () { seekTo(v.timecode, i); }
+        'aria-label': 'Воспроизвести видео с ' + tc,
+        onclick: function () { seekTo(v.timecode, i, true); }
       }, [svgIcon('M8 5v14l11-7z', 'tc-icon'), el('span', { text: tc })]) : null
     ]);
 
@@ -753,13 +753,18 @@
     return card;
   }
 
-  function seekTo(t, index) {
+  /** Moves the player to t; play=true (the timecode buttons) also starts playback there. */
+  function seekTo(t, index, play) {
     highlight(index);
     if (!state.playerOk) return;
     try { video.currentTime = Math.max(0, t); } catch (e) { return; }
     var wrap = $('video-wrap');
     if (!isInViewport(wrap)) wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    announce('Видео перемотано на ' + Fmt.formatTimecode(t) + '.');
+    if (play) {
+      var p = video.play();
+      if (p && p.catch) p.catch(function () { /* playback blocked: the player stays at t */ });
+    }
+    announce((play ? 'Воспроизведение с ' : 'Видео перемотано на ') + Fmt.formatTimecode(t) + '.');
   }
 
   /* ---------- lightbox ---------- */
