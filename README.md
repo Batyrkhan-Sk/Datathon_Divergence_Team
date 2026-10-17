@@ -7,6 +7,62 @@ explanation, and a reference to the relevant regulation of the Republic of Kazak
 
 The result is a hint for a human reviewer, not a legal conclusion.
 
+## Project status
+
+*Last updated: 2026-10-17, after the ML base was set up (commit `fd8e2c1`). This
+section is updated after every step.*
+
+### Done
+| Area | Result | Where |
+|---|---|---|
+| Case analysis | Requirements, scoring and constraints summarised | `docs/internal/PLAN.md` §1 |
+| Data | 42 training videos: 22 violations, 20 clean, all 464×848 at ~30 fps. Names normalised; frames cached at 4 fps (5,797 frames) | `data/raw/`, `data/frames/` (not in git) |
+| Violation types | 9 types defined; **18 of 22** violation videos typed with confidence | `docs/internal/step1_findings.md` |
+| Legal mapping | Each type mapped to clauses of 3 RK acts (НБРК No. 231, НБРК No. 14, АРРФР No. 53), with verbatim quotes | `data/rules.json`, `docs/internal/legal_mapping.md` |
+| Labels | One table: verdict, timestamp, type, type confidence, room layout (**A–E**, 5 setups) | `data/labels.csv` |
+| Pipeline skeleton | `analyze()` returns the exact API format, with evidence frames and citations. Detectors plug into `ml/detectors/` | `ml/` |
+| Evaluation | Misses, false alarms, timecode error, type accuracy and runtime, per video and per layout. Scoring checked with a synthetic oracle | `eval/run_eval.py` |
+| Baseline | Empty pipeline: recall 0 / 22, false alarms 0 / 20, ~0.5 s per video | `out/eval/*-empty-baseline.json` |
+
+### Next
+| # | Task | Owner | Why |
+|---|---|---|---|
+| 1 | **Feasibility test:** which objects off-the-shelf models see reliably; speed and memory on a 4 GB GPU; licences | ML | Decides the model set and whether we must fine-tune |
+| 2 | Backend: FastAPI around `ml.pipeline.analyze()` (2 endpoints, `X-API-Key`, job queue, one GPU worker) | Backend | The jury grades only through the API |
+| 3 | Frontend: upload, status and result pages (verdict, cards, evidence, citation link, video timeline) | Frontend | Product score; human-readable result |
+| 4 | First detectors, in order of value: `unauthorized_access`, `cash_unattended`, `safe_left_open`, `workstation_unlocked`, `personal_items` | ML | Covers 16 of 22 violation videos |
+| 5 | Leave-one-layout-out evaluation (tune on 4 layouts, test on the 5th, rotate) | ML | Honest estimate for the new camera angle in the final test |
+| 6 | Public URL (Cloudflare Tunnel) and a load test with 5+ concurrent videos | Backend | 5-min limit per video under jury load |
+
+**Open questions**
+- Violation types are unknown or uncertain for X-1, X-2, X-13, X-44 and X-17.
+- `workstation_unlocked` has only an indirect legal source so far.
+- The date of the 12:00 deadline has not been confirmed.
+
+### Model recommendations
+*Pre-feasibility: these are candidates, chosen for licence, size and fit with a 4 GB
+GPU. The feasibility test will confirm or replace them.*
+
+| Job | First choice | Alternatives | Licence | Notes |
+|---|---|---|---|---|
+| People detection | RT-DETR-R18 (HF `transformers`) | D-FINE-S, YOLOX-S | Apache-2.0 | Pre-trained COCO `person` is enough; no training needed |
+| Tracking | ByteTrack | OC-SORT | MIT | Tells the teller, client and outsiders apart over time (no faces) |
+| Hands / pose | RTMPose-s | — | Apache-2.0 | Hand position at the safe, laptop, cash or counting machine |
+| Scene objects, zero-shot | OWLv2 | Grounding DINO-T, Florence-2 (MIT) | Apache-2.0 | Text-prompted: safe, door, laptop, counting machine, bag, coat, cup, phone. Used to find zones in each video |
+| **Fine-tune if zero-shot is weak** | **RT-DETR-R18 or D-FINE-S** trained on our frames | RF-DETR-S, YOLOX-S | Apache-2.0 | Small objects: banknotes, coin rolls, cash bag, key in lock. Label ~300–500 frames from `data/frames/` with CVAT or Label Studio (both run locally) |
+| **State classifiers** | **MobileNetV3 / EfficientNet-B0** on crops (torchvision) | — | BSD-3 | Cheapest way to read states: safe door open/closed, laptop screen on/locked, cash on desk yes/no. ~100–200 labelled crops per state |
+| Verification / unseen types | Qwen3-VL-2B *(verify licence)* | SmolVLM2-2.2B, Moondream2, Florence-2 | Apache-2.0 / MIT | Yes/no questions on crops around candidate events only. Keeps within 4 GB and the time budget |
+
+**Do not use**
+- Ultralytics YOLOv5/v8/v11: AGPL-3.0.
+- Qwen2.5-VL-3B: research licence, not for commercial use.
+- Any cloud API: disqualification.
+
+**Training recommendation:** do not train one end-to-end video model; 42 clips are far
+too few, and it would not survive a new camera angle. Use pre-trained detectors as they
+are, and fine-tune only small parts: a detector for cash-type objects and crop
+classifiers for states. Hold out one layout per round.
+
 ## Principles
 - **Fully local.** All models run inside the service. No cloud AI APIs are used, and no
   video, frames or descriptions leave the machine. After the model weights are

@@ -46,6 +46,9 @@ rule grounding 15 · robustness to a new camera angle 10 · product 10 · tech 1
 
 ## 2. What is done
 
+> The live, up-to-date status is the **Project status** section of the root
+> `README.md`. This section is the snapshot from the analysis phase.
+
 | Item | Where |
 |---|---|
 | Dataset copied, with filenames normalised (labels mix Latin `X` and Cyrillic `Х`) | `data/raw/`, `data/open_labels.xlsx` |
