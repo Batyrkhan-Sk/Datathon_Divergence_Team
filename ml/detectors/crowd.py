@@ -42,9 +42,10 @@ def _solo_room_entries(times, people) -> list[Event]:
             # Room was empty at the start: the teller came in and the door stayed passable,
             # so the violation starts at her arrival (X-33: label 6 s, outsider at 10.5 s).
             onset = arrived
-            text = (f"Кассир вошла в помещение кассы ({arrived:.0f} с), после чего в помещение "
-                    f"вошло второе лицо ({start:.0f} с) и находилось там {end - start:.0f} с: "
-                    f"вход в кассу не был закрыт")
+            # X-33: the person stands in the open doorway — say only what the frame shows.
+            text = (f"Кассир вошла в помещение кассы ({arrived:.0f} с); с {start:.0f} с у входа "
+                    f"или в помещении находится второе лицо ({end - start:.0f} с): вход в кассу "
+                    f"не был закрыт")
         else:
             onset = start
             text = (f"Во время работы кассира в помещение кассы вошло второе лицо "

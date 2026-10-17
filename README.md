@@ -39,8 +39,8 @@ Missed: X-22, X-13 (key left in safe: too small to see), X-32 (door left open), 
 | Area | Result | Where |
 |---|---|---|
 | Case analysis | Requirements, scoring and constraints summarised | `docs/internal/PLAN.md` §1 |
-| Data | 42 training videos: 22 violations, 20 clean, all 464×848 at ~30 fps. Names normalised; frames cached at 4 fps (5,797 frames) | `data/raw/`, `data/frames/` (not in git) |
-| Violation types | 9 types defined; **18 of 22** violation videos typed with confidence | `docs/internal/step1_findings.md` |
+| Data | 42 training videos = 40 unique (X-47 = X-4, X-48 = X-5): 21 with a violation, 19 clean, all 464×848 at ~30 fps. Names normalised; frames cached at 4 fps (5,797 frames) | `data/raw/`, `data/frames/` (not in git) |
+| Violation types | 9 types defined; types of X-1, X-2, X-13, X-17, X-44 remain uncertain (X-1 and X-44 do use the counting machine, so not «без машинки») | `docs/internal/step1_findings.md` |
 | Legal mapping | Each type mapped to clauses of 3 RK acts (НБРК No. 231, НБРК No. 14, АРРФР No. 53), with verbatim quotes | `data/rules.json`, `docs/internal/legal_mapping.md` |
 | Labels | One table: verdict, timestamp, type, type confidence, room layout (**A–E**, 5 setups) | `data/labels.csv` |
 | Pipeline skeleton | `analyze()` returns the exact API format, with evidence frames and citations. Detectors plug into `ml/detectors/` | `ml/` |

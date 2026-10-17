@@ -59,5 +59,6 @@ def citation(type_id: str, rules_path: str | None = None) -> dict | None:
         "short": doc.get("short", doc["title"]),
         "clause": src["clause"],
         "quote": src["quote"],
-        "url": deep_link(doc["url"], src["quote"]),
+        # "anchor": words to jump to when the quote's start is ambiguous on the page
+        "url": deep_link(doc["url"], src.get("anchor") or src["quote"]),
     }
