@@ -2,12 +2,15 @@
 
     python -m ml.pipeline data/raw/X-26.mov          # prints JSON (images truncated)
 """
+import base64
 import json
 import os
 import sys
 import time
 from pathlib import Path
 from typing import Callable
+
+import cv2
 
 from . import catalog, evidence, scene
 from .detectors import DETECTORS, Context
@@ -102,18 +105,69 @@ def analyze(video_path: str, progress: Callable[[float], None] | None = None,
             "rule": rule,
             "evidence_frames": evidence.frames_for(video_path, e, info.duration),
         })
+    try:
+        scene_view = _scene(ctx)
+    except Exception:  # an explanatory extra must never break the result
+        scene_view = None
     report(1.0)
-    return {
+    result = {
         "verdict": "violation" if violations else "no_violation",
         "violations": violations,
         "processing_sec": round(time.time() - started, 2),
     }
+    if scene_view:
+        result["scene"] = scene_view
+    return result
+
+
+SCENE_COLORS = {"Рабочее место (ноутбук)": (60, 180, 60), "Зона стола": (220, 140, 40),
+                "Сейф": (0, 140, 255), "Человек": (230, 230, 230)}
+
+
+def _scene(ctx: Context) -> dict | None:
+    """One frame showing what the service found in this room (workplace, desk, safe,
+    people). Explains results to the reviewer and shows that zones are derived from the
+    video itself rather than fixed coordinates."""
+    from .detectors.personal_items import _desk_crop_box
+    times, people = ctx.extras.get("times") or [], ctx.extras.get("people") or []
+    if not times:
+        return None
+    present = [k for k, p in enumerate(people) if p] or list(range(len(times)))
+    k = present[len(present) // 2]
+    t, frame = ctx.frames[k]
+    objects = []
+    if ctx.extras.get("laptop"):
+        objects.append(("Рабочее место (ноутбук)", ctx.extras["laptop"]))
+    desk = _desk_crop_box(ctx)
+    if desk:
+        objects.append(("Зона стола", desk))
+    if ctx.extras.get("safe"):
+        objects.append(("Сейф", ctx.extras["safe"]))
+    objects += [("Человек", b) for b in people[k]]
+    img = frame.copy()
+    for label, (x1, y1, x2, y2) in objects:
+        color = SCENE_COLORS[label]
+        cv2.rectangle(img, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
+        (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.45, 1)
+        ty = max(th + 6, int(y1))
+        cv2.rectangle(img, (int(x1), ty - th - 6), (int(x1) + tw + 6, ty), (30, 30, 30), -1)
+        cv2.putText(img, label, (int(x1) + 3, ty - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 1,
+                    cv2.LINE_AA)
+    ok, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 85])
+    if not ok:
+        return None
+    return {"timestamp_sec": round(t, 2),
+            "image_base64": base64.b64encode(buf.tobytes()).decode("ascii"),
+            "objects": [{"label": lbl, "box": [round(float(v), 1) for v in b]}
+                        for lbl, b in objects]}
 
 
 def _truncate_images(result: dict) -> dict:
     for v in result["violations"]:
         for f in v["evidence_frames"]:
             f["image_base64"] = f["image_base64"][:40] + "..."
+    if "scene" in result:
+        result["scene"]["image_base64"] = result["scene"]["image_base64"][:40] + "..."
     return result
 
 

@@ -121,7 +121,10 @@
           <h1 id="verdict-title" tabindex="-1"></h1>
           <p class="verdict-meta" id="verdict-meta"></p>
         </div>
-        <button type="button" class="btn btn-secondary verdict-reset" id="btn-reset">Проверить другое видео</button>
+        <div class="verdict-actions">
+          <button type="button" class="btn btn-secondary" id="btn-report">Скачать отчёт</button>
+          <button type="button" class="btn btn-secondary verdict-reset" id="btn-reset">Проверить другое видео</button>
+        </div>
       </div>
 
       <p class="disclaimer">
@@ -154,6 +157,13 @@
               доступны в списке.
             </p>
           </div>
+          <div class="scene-card" id="scene-card" hidden>
+            <h2 class="col-title">Как сервис понял сцену</h2>
+            <p class="scene-note">Объекты найдены автоматически для этой записи, без заранее заданных
+              координат, поэтому сервис работает и при другом ракурсе камеры.</p>
+            <img class="scene-img" id="scene-img" alt="Кадр записи с найденными объектами сцены">
+            <ul class="scene-legend" id="scene-legend"></ul>
+          </div>
         </div>
 
         <div class="findings-col">
@@ -172,7 +182,7 @@
 
   <footer class="app-footer">
     <div class="container">
-      <p>Обработка выполняется локально в инфраструктуре банка. Распознавание лиц не используется.</p>
+      <p>Анализ выполняется локально на сервере сервиса, без облачных AI-сервисов. Распознавание лиц не используется.</p>
     </div>
   </footer>
 

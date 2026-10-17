@@ -407,8 +407,102 @@
     $('disclaimer-extra').hidden = !n;
 
     setupVideo(state.file, r.violations);
+    renderScene(r.scene);
     showView('result', 'verdict-title');
     announce(title + (r.isViolation && n ? '. Эпизодов: ' + n + '.' : '.'));
+  }
+
+  // Colours match the boxes drawn by the server (ml/pipeline.py SCENE_COLORS, BGR there).
+  var SCENE_COLORS = {
+    'Рабочее место (ноутбук)': 'rgb(60,180,60)',
+    'Зона стола': 'rgb(40,140,220)',
+    'Сейф': 'rgb(255,140,0)',
+    'Человек': 'rgb(150,150,150)'
+  };
+
+  function renderScene(scene) {
+    var card = $('scene-card');
+    if (!scene) { card.hidden = true; return; }
+    $('scene-img').src = scene.src;
+    var legend = $('scene-legend');
+    legend.textContent = '';
+    scene.labels.forEach(function (label) {
+      legend.appendChild(el('li', null, [
+        el('span', { class: 'scene-swatch', 'aria-hidden': 'true',
+                     style: 'border-color:' + (SCENE_COLORS[label] || 'currentColor') }),
+        el('span', { text: label })
+      ]));
+    });
+    card.hidden = false;
+  }
+
+  /* ---------- downloadable report (self-contained HTML, opens offline, prints to PDF) ---------- */
+
+  function esc(s) {
+    return String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function buildReport(r) {
+    var fileName = state.file ? state.file.name : '';
+    var now = new Date();
+    var when = now.toLocaleString('ru-RU');
+    var verdict = r.isViolation ? 'Обнаружены признаки возможных нарушений' : 'Нарушение не обнаружено';
+    var items = r.violations.map(function (v, i) {
+      var rule = v.rule ? (
+        '<div class="rule"><div class="rule-title">Нормативное основание</div>' +
+        (v.rule.document ? '<p>' + esc(v.rule.document) + '</p>' : '') +
+        (v.rule.clause ? '<p><b>Пункт:</b> ' + esc(v.rule.clause) + '</p>' : '') +
+        (v.rule.quote ? '<blockquote>' + esc(v.rule.quote) + '</blockquote>' : '') +
+        (v.rule.url ? '<p><a href="' + esc(v.rule.url) + '">' + esc(v.rule.url) + '</a></p>' : '') +
+        '</div>') : '';
+      var frames = v.frames.map(function (f) {
+        return '<figure><img src="' + esc(f.src) + '" alt=""><figcaption>' +
+               esc(Fmt.formatTimecode(f.timestamp)) + '</figcaption></figure>';
+      }).join('');
+      return '<section class="ep"><h2>' + (i + 1) + '. ' + esc(v.type) + '</h2>' +
+        '<p class="meta">Таймкод: <b>' + esc(Fmt.formatTimecode(v.timecode)) + '</b>' +
+        (v.confidence !== null ? ' · Уверенность: ' + esc(Fmt.formatPercent(v.confidence)) : '') + '</p>' +
+        (v.description ? '<p>' + esc(v.description) + '</p>' : '') +
+        (frames ? '<div class="frames">' + frames + '</div>' : '') + rule + '</section>';
+    }).join('');
+    var scene = r.scene ? (
+      '<section class="ep"><h2>Как сервис понял сцену</h2>' +
+      '<p class="meta">Объекты найдены автоматически для этой записи: ' + esc(r.scene.labels.join(', ')) + '</p>' +
+      '<div class="frames"><figure><img src="' + esc(r.scene.src) + '" alt=""></figure></div></section>') : '';
+    var css = 'body{font:15px/1.5 "Segoe UI",Arial,sans-serif;color:#1b2130;max-width:900px;margin:24px auto;padding:0 16px}' +
+      'h1{font-size:22px;margin:0 0 4px}h2{font-size:17px;margin:0 0 6px}.meta{color:#5a6376;margin:2px 0 8px}' +
+      '.verdict{padding:14px 18px;border-radius:10px;margin:16px 0;font-weight:600}' +
+      '.v-bad{background:#fdf1ef;color:#b3261e;border:1px solid #f2c3bd}.v-ok{background:#eaf6ef;color:#17703f;border:1px solid #b5dfc5}' +
+      '.ep{border:1px solid #dde1e8;border-radius:10px;padding:14px 18px;margin:14px 0;page-break-inside:avoid}' +
+      '.frames{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0}figure{margin:0}img{max-height:320px;border-radius:6px;display:block}' +
+      'figcaption{font-size:12px;color:#5a6376;text-align:center}.rule{background:#f8f9fb;border-radius:8px;padding:10px 14px;margin-top:8px}' +
+      '.rule-title{font-weight:600;margin-bottom:4px}blockquote{margin:6px 0;padding-left:10px;border-left:3px solid #c5cbd6;color:#3a4252}' +
+      '.note{color:#5a6376;font-size:13px;margin-top:20px}';
+    return '<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Отчёт — ' + esc(fileName) +
+      '</title><style>' + css + '</style></head><body>' +
+      '<h1>Контроль кассовой дисциплины — отчёт</h1>' +
+      '<p class="meta">Файл: ' + esc(fileName) + ' · Сформирован: ' + esc(when) +
+      (r.processingSec !== null ? ' · Время обработки: ' + esc(Fmt.formatDuration(r.processingSec)) : '') + '</p>' +
+      '<div class="verdict ' + (r.isViolation ? 'v-bad' : 'v-ok') + '">' + esc(verdict) +
+      (r.isViolation ? ' · Эпизодов: ' + r.violations.length : '') + '</div>' +
+      items + scene +
+      '<p class="note">Результат — подсказка для проверяющего сотрудника, а не окончательное юридическое ' +
+      'или дисциплинарное заключение. Каждый эпизод нужно проверить по записи.</p></body></html>';
+  }
+
+  function downloadReport() {
+    if (!state.result) return;
+    var html = buildReport(state.result);
+    var base = (state.file ? state.file.name.replace(/\.[^.]+$/, '') : 'video').replace(/[^\w.\-]+/g, '_');
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+    a.download = 'report_' + base + '.html';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    announce('Отчёт сохранён');
   }
 
   function confidenceInfo(c) {
@@ -741,6 +835,7 @@
   }
 
   $('btn-reset').addEventListener('click', reset);
+  $('btn-report').addEventListener('click', downloadReport);
 
   /* ---------- mock mode extras ---------- */
 

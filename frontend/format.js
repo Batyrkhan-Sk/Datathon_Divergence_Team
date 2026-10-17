@@ -151,11 +151,22 @@
     });
     var verdict = job && job.verdict;
     var isViolation = verdict === 'violation' || (verdict !== 'no_violation' && violations.length > 0);
+    var scene = job && job.scene;
+    var sceneOut = (scene && typeof scene.image_base64 === 'string' && scene.image_base64) ? {
+      timestamp: isFiniteNumber(scene.timestamp_sec) ? scene.timestamp_sec : null,
+      src: /^data:image\//.test(scene.image_base64)
+        ? scene.image_base64
+        : 'data:image/jpeg;base64,' + scene.image_base64.replace(/\s+/g, ''),
+      labels: (Array.isArray(scene.objects) ? scene.objects : [])
+        .map(function (o) { return o && typeof o.label === 'string' ? o.label : null; })
+        .filter(function (l, i, arr) { return l && arr.indexOf(l) === i; })
+    } : null;
     return {
       jobId: job && job.job_id ? String(job.job_id) : '',
       isViolation: isViolation,
       violations: isViolation ? violations : [],
-      processingSec: isFiniteNumber(job && job.processing_sec) ? job.processing_sec : null
+      processingSec: isFiniteNumber(job && job.processing_sec) ? job.processing_sec : null,
+      scene: sceneOut
     };
   }
 
