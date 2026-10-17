@@ -1,0 +1,7 @@
+{
+  "job_id": "mock-clean",
+  "status": "done",
+  "verdict": "no_violation",
+  "violations": [],
+  "processing_sec": 8.7
+}

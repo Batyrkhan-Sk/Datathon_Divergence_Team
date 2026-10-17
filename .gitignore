@@ -29,3 +29,6 @@ weights/
 Thumbs.db
 .vscode/
 .idea/
+
+# Backend runtime data (uploads, job DB)
+backend/storage/

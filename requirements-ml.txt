@@ -1,0 +1,8 @@
+# ML / feasibility dependencies (on top of requirements.txt).
+# Install PyTorch with CUDA first, matching your driver, e.g. CUDA 12.6:
+#   python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126
+transformers>=4.57
+accelerate
+timm
+einops
+bitsandbytes

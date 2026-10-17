@@ -9,8 +9,8 @@ The result is a hint for a human reviewer, not a legal conclusion.
 
 ## Project status
 
-*Last updated: 2026-10-17, after the ML base was set up (commit `fd8e2c1`). This
-section is updated after every step.*
+*Last updated: 2026-10-17, after backend and frontend were built; feasibility test in
+progress. This section is updated after every step.*
 
 ### Done
 | Area | Result | Where |
@@ -23,16 +23,19 @@ section is updated after every step.*
 | Pipeline skeleton | `analyze()` returns the exact API format, with evidence frames and citations. Detectors plug into `ml/detectors/` | `ml/` |
 | Evaluation | Misses, false alarms, timecode error, type accuracy and runtime, per video and per layout. Scoring checked with a synthetic oracle | `eval/run_eval.py` |
 | Baseline | Empty pipeline: recall 0 / 22, false alarms 0 / 20, ~0.5 s per video | `out/eval/*-empty-baseline.json` |
+| **Backend** | FastAPI. Jury API exactly per the case (`POST /api/v1/analyze`, `GET /api/v1/jobs/{id}`, `X-API-Key` → 401 otherwise); keyless UI routes `/ui/api/...` with a rate limit. One persistent GPU worker plus a queue, a 240 s hard timeout per job, SQLite store, `ANALYZER=real\|demo`, `STRICT_SCHEMA=1` to strip extras. Output repaired defensively (verdict matches violations; 1–3 JPEG frames). **27/27 tests pass; jury contract checker PASS** (incl. 5 concurrent uploads) | `backend/` (see `backend/README.md`) |
+| **Frontend** | Plain HTML/JS/CSS, no build, works offline, Russian UI. Upload → progress → verdict banner → violation cards (type, timecode, description, rule with adilet link, evidence frames with lightbox) → video player with timeline markers. Mock mode `?mock=1`. Tested in headless Chrome, desktop and mobile | `frontend/` (see `frontend/README.md`) |
+| Integration | Backend serves the UI at `/`. UI flow and jury contract checker verified end to end (demo analyzer) | — |
 
 ### Next
 | # | Task | Owner | Why |
 |---|---|---|---|
-| 1 | **Feasibility test:** which objects off-the-shelf models see reliably; speed and memory on a 4 GB GPU; licences | ML | Decides the model set and whether we must fine-tune |
-| 2 | Backend: FastAPI around `ml.pipeline.analyze()` (2 endpoints, `X-API-Key`, job queue, one GPU worker) | Backend | The jury grades only through the API |
-| 3 | Frontend: upload, status and result pages (verdict, cards, evidence, citation link, video timeline) | Frontend | Product score; human-readable result |
-| 4 | First detectors, in order of value: `unauthorized_access`, `cash_unattended`, `safe_left_open`, `workstation_unlocked`, `personal_items` | ML | Covers 16 of 22 violation videos |
-| 5 | Leave-one-layout-out evaluation (tune on 4 layouts, test on the 5th, rotate) | ML | Honest estimate for the new camera angle in the final test |
-| 6 | Public URL (Cloudflare Tunnel) and a load test with 5+ concurrent videos | Backend | 5-min limit per video under jury load |
+| 1 | **Feasibility test** *(in progress)*: which objects off-the-shelf models see reliably; speed and memory on a 4 GB GPU | ML | Decides the model set and whether we must fine-tune |
+| 2 | First detectors, in order of value: `unauthorized_access`, `cash_unattended`, `safe_left_open`, `workstation_unlocked`, `personal_items` | ML | Covers 16 of 22 violation videos |
+| 3 | Pipeline fixes from the backend review: add `ml.pipeline.warmup()` (load models at worker start); stream frames instead of `list(iter_frames(...))` (~670 MB RAM for a 143 s video); make `evidence.frames_for` never return 0 frames | ML | Startup time, memory, robustness |
+| 4 | **Time budget:** ≤ ~50 s per video including 143 s clips. The queue runs jobs one at a time, so the 5th of 5 concurrent jury videos waits for the other four | ML | 5-min limit per video |
+| 5 | Leave-one-layout-out evaluation, plus simulated camera angles (perspective warp, flip, zoom) on the training videos | ML | Honest estimate for the new camera angle |
+| 6 | Create the jury `API_KEY` in a root `.env`; public URL via Cloudflare Tunnel; final load test on the real pipeline | Backend | Jury access; 5-min limit under load |
 
 **Open questions**
 - Violation types are unknown or uncertain for X-1, X-2, X-13, X-44 and X-17.
@@ -86,8 +89,8 @@ curl -X POST https://<host>/api/v1/analyze -H "X-API-Key: <key>" -F "file=@video
 ## Repository layout
 
 ```
-backend/    API, job queue, worker            (planned)
-frontend/   upload and result UI              (planned)
+backend/    API, job queue, GPU worker; run: python -m backend  (see backend/README.md)
+frontend/   upload and result UI, served by the backend at /  (see frontend/README.md)
 ml/         video analysis pipeline
   pipeline.py    analyze(video_path) -> result dict in the API format
   detectors/     one module per violation type (register with @register)
@@ -111,6 +114,31 @@ result = analyze("video.mov", progress=lambda p: ...)   # p in 0..1
 #  "processing_sec": float}
 ```
 
+### `data/rules.json`: violation catalogue and legal citations
+
+The single source of truth for violation types and the regulations behind them. The
+service copies citations from it and **never generates legal text**, which protects the
+rule-grounding score.
+
+- `_meta.documents`: the 3 RK acts used (НБРК No. 231, НБРК No. 14, АРРФР No. 53), each
+  with `title`, `act` and an adilet `url`.
+- `types[]`: one entry per violation type:
+  - `id`: e.g. `cash_unattended`; detectors emit this as `Event.type_id`
+  - `name`: the Russian display name, returned as `type` in the API
+  - `observable`: what must be *visible* on video for this type (the detector spec)
+  - `sources[]`: `doc` key, `clause`, verbatim `quote`; the first source is the one the API returns
+  - `interpretation`: how the clause applies, and what must not be claimed
+  - `legal_confidence`: `direct` / `interpretation` / `indirect`
+  - `train_examples`: training videos as `X-26@9` (`?` = type not confirmed)
+- `_meta.unresolved_train_examples`, `_meta.ruled_out`: open cases and rejected ideas.
+
+**Who uses what**
+- **ML:** `id`, `observable`, `train_examples`. Adding a new type means adding an entry here first.
+- **Backend:** nothing directly; `ml.catalog` resolves names and citations.
+- **Frontend:** the `rule` object in the API response (`document`, `clause`, `quote`, `url`).
+- **Everyone:** before submission, open each `url` and check the clause numbers and quotes
+  against adilet.zan.kz.
+
 ### For ML: adding a detector
 
 Create `ml/detectors/<type>.py` with a function `detect(ctx) -> list[Event]`
@@ -127,6 +155,12 @@ Requires Python 3.11.
 python -m venv .venv
 .venv/Scripts/python -m pip install -r requirements.txt   # Windows
 # source .venv/bin/activate && pip install -r requirements.txt  # Linux/macOS
+
+# backend
+.venv/Scripts/python -m pip install -r backend/requirements.txt
+# ML (models): PyTorch with CUDA first, then the rest (see requirements-ml.txt)
+.venv/Scripts/python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126
+.venv/Scripts/python -m pip install -r requirements-ml.txt
 ```
 
 | Path | What | Source |
