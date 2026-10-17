@@ -234,7 +234,7 @@ python tools/zoom.py data/raw/X-1.mov 19 24 0.5 0 0.3 0.7 0.6 out/zoom/X-1.jpg
 
 | Role | Area |
 |---|---|
-| ML engineer | video analysis pipeline, models, evaluation |
+| ML engineer | video analysis pipeline, models, evaluation - @batyr_ssh |
 | Backend engineer | API, job processing, deployment |
 | Frontend engineer | user interface |
 
