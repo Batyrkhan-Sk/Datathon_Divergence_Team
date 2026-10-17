@@ -98,21 +98,32 @@ def detect(ctx: Context) -> list[Event]:
 
 
 CUP_Q = "Is there a cup, mug or bottle in this image?"
+MONEY_IN_HAND_Q = "Is the object in the hands a roll or stack of banknotes (money)?"
 CUP_P = 0.5
+CUP_CONTEXT = 3.0   # crop = detection box widened 3x on each side: hands and desk visible
+CUP_CHECKS = 3
 
 
 def _vlm_confirms_cup(ctx: Context, span, found) -> bool:
-    """With a zoomed camera the detector can take a hand for a cup with high confidence
-    (X-35 zoom). The VLM looks at a crop around the best detection; without the VLM the
-    detector result stands."""
+    """The detector takes cylinder-like things for cups: a hand under zoom (X-35) and,
+    importantly at a cash desk, a rolled bundle of banknotes (X-47 at 35 s). On a tight
+    crop the VLM makes the same mistake, so it looks at a wide crop of the strongest
+    detections and a detection counts only if it is a cup AND not banknotes; a majority
+    must agree. Without the VLM the detector result stands."""
     if os.environ.get("ML_USE_VLM") != "1":
         return True
     from ..perception import vlm
-    k, d = max(((k, d) for k in span for d in found[k]), key=lambda kd: kd[1]["score"])
-    x1, y1, x2, y2 = d["box"]
-    w, h = x2 - x1, y2 - y1
-    region = [x1 - 1.5 * w, y1 - 1.5 * h, x2 + 1.5 * w, y2 + 1.5 * h]
-    return vlm.p_yes(vlm.crop(ctx.frames[k][1], region, pad=0.0), CUP_Q) >= CUP_P
+    cands = sorted(((k, d) for k in span for d in found[k]), key=lambda kd: -kd[1]["score"])
+    cands = cands[:CUP_CHECKS]
+    ok = 0
+    for k, d in cands:
+        x1, y1, x2, y2 = d["box"]
+        w, h = x2 - x1, y2 - y1
+        crop = vlm.crop(ctx.frames[k][1], [x1 - CUP_CONTEXT * w, y1 - CUP_CONTEXT * h,
+                                           x2 + CUP_CONTEXT * w, y2 + CUP_CONTEXT * h], pad=0.0)
+        if vlm.p_yes(crop, CUP_Q) >= CUP_P and vlm.p_yes(crop, MONEY_IN_HAND_Q) < CUP_P:
+            ok += 1
+    return ok * 2 > len(cands)
 
 
 def _drinks(ctx: Context) -> list[Event]:

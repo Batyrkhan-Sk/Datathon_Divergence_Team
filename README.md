@@ -9,7 +9,7 @@ The result is a hint for a human reviewer, not a legal conclusion.
 
 ## Project status
 
-*Last updated: 2026-10-17 ~23:20, after v14 (scene overlay + downloadable report; deployed at the fixed ngrok URL). **Deadline:
+*Last updated: 2026-10-18 ~00:10, after v15 (cup check fixed; deployed at the fixed ngrok URL). **Deadline:
 2026-10-18 12:00.** This section is updated after every step.*
 
 **Current score (`eval/run_eval.py`, tag `v12`, GPU server, VLM on; LIVE):** recall
@@ -34,7 +34,8 @@ type names limited to what is visible. Submission document: `docs/SUBMISSION.md`
 | v11: + entry-with-cash detector | 15/22 | **4/20** → dropped |
 | v12: timecode fixes | 15/22 | 0/20 (type acc 79%, 73% within 2 s) |
 | v13: robustness fixes | **15/22** | **0/20**; simulated camera changes (`tools/augment_videos.py`): mirror/tilt/zoom 12/22 with 0 FA (v12 had 1 FA each), low-quality camera 7/22, 0 FA |
-| **v14 (LIVE): + scene overlay and downloadable report** | 15/22 | 0/20 (detections unchanged; 27/27 backend tests) |
+| v14: + scene overlay and downloadable report | 15/22 | 0/20 (detections unchanged; 27/27 backend tests) |
+| **v15 (LIVE): cup must not be banknotes (wide-crop VLM check)** | **13/22** | **0/20**; type acc 92%, 85% of timecodes within 2 s. X-4/X-47 no longer flagged: they were only caught via a rolled banknote bundle taken for a cup |
 
 Missed: X-22, X-13 (key left in safe: too small to see), X-32 (door left open), X-34
 (client absent), X-1, X-2, X-44 (types unclear). Timecodes of unauthorized_access are ~4–5 s
