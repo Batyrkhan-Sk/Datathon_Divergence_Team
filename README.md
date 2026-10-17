@@ -9,18 +9,27 @@ The result is a hint for a human reviewer, not a legal conclusion.
 
 ## Project status
 
-*Last updated: 2026-10-17 ~18:00, after detectors v5 (paused; laptop closed). **Deadline:
+*Last updated: 2026-10-17 ~20:00, after eval v8 on the GPU server. **Deadline:
 2026-10-18 12:00.** This section is updated after every step.*
 
-**Current score on the 42 training videos (`eval/run_eval.py`, tag v5):** recall **11/22**,
-false alarms **0/20**, timecode error 6.7 s mean (55% within 2 s; the mean is inflated by
-X-4/X-47, see below), type accuracy 55%, runtime 5 s average / 23 s worst (cached
-detections; real GPU timing still to be measured on mains power).
+**Current score (`eval/run_eval.py`, tag `server-v8`, GPU server, VLM on):** recall
+**15/22**, false alarms **0/20** (unique videos: 14/21 caught, 0/19 false; accuracy 82.5%,
+precision 100%). Timecode error 5.6 s mean (53% within 2 s), type accuracy 57%, runtime
+**6.8 s average / 21 s worst** per video. For comparison, another team's best end-to-end
+VLM (35B) reached 60% accuracy.
 
-Caught: X-11, X-15, X-24, X-26, X-28 (workplace), X-18, X-30, X-33 (unauthorized), X-46
-(drink). **X-4/X-47 are caught only by a cup seen at 35 s, so their verdict is right but the
-type and timecode are wrong.** Missed: X-1, X-2, X-13, X-17, X-20, X-22, X-32, X-34, X-38,
-X-40, X-44.
+| Version | Caught | False alarms |
+|---|---|---|
+| Laptop v5 (detectors) | 11/22 | 0/20 |
+| Server, detectors only | 12/22 | 0/20 |
+| v6: + VLM safe and key | 15/22 | 2/20 (key rule) |
+| v7: key rule off, + coat/bag | 15/22 | 2/20 (coat/bag too loose) |
+| **v8: coat/bag tightened** | **15/22** | **0/20** |
+
+Missed: X-22, X-13 (key left in safe: too small to see), X-32 (door left open), X-34
+(client absent), X-1, X-2, X-44 (types unclear). Timecodes of unauthorized_access are ~4–5 s
+off (X-18, X-33, X-38), which costs type accuracy. X-4/X-47 are flagged via a cup at 35 s
+(right verdict, wrong type).
 
 ### Done
 | Area | Result | Where |
@@ -38,6 +47,12 @@ X-40, X-44.
 | Integration | Backend serves the UI at `/`. UI flow and jury contract checker verified end to end (demo analyzer) | — |
 | Feasibility, detectors | **RT-DETR v2** chosen for people and laptops (best quality, fastest); OWLv2 for text-prompted checks on crops; Grounding DINO rejected (too slow). No detector finds the safe or a key | `docs/internal/feasibility.md` |
 | **First detectors** | `ml/detectors/workplace.py`: teller leaves (stand-up / walk-off onset) → **cash_unattended** (OWLv2 money on desk crop, at desk height, ≥ 2 frames) and **workstation_unlocked** (screen still shows the bright bluish-white app). `ml/detectors/crowd.py`: **≥ 3 people for ≥ 5 s**, or a **second person entering a solo room** (median count 1, stays ≥ 4 s, or ≥ 2.5 s if until video end) → unauthorized_access. `ml/detectors/personal_items.py`: cup/bottle ≥ 2 s that is either confident (≥ 0.55) or moving → personal_items. People seen through or reflected in the glass are filtered by size and position | `ml/` |
+| **GPU server** | Team Jupyter server, 2× RTX A6000 (48 GB). Project at `~/work/forte_datathon` (Jupyter: `forte_datathon/`) with its own env `env/`, models in `hf_cache/`, logs in `logs/`. Nothing outside that folder is touched (other projects live there). RT-DETR runs at 0.017 s/frame there, ~11× the laptop | `forte_datathon/` on the server |
+| VLM result (2B) | Qwen3-VL-2B 4-bit passed only **6/16** state checks (never saw the key, rarely the cash) → moving to **Qwen3-VL-8B** on the server, on zoomed crops. `ml/perception/vlm.py` picks 8B on a big GPU, 2B in 4-bit on a small one; includes `p_yes`, `locate` (bounding box) and `describe` | `ml/perception/vlm.py` |
+| VLM result (8B) | Qwen3-VL-8B (bf16, GPU server): **12/16** checks, 0.17 s per question, 16.5 GB. Full-frame answers are noisy (confuses the open room door with the safe door), so all VLM use is on **crops** with multi-sample consistency | `out/feasibility/qwen3vl8b/` (server) |
+| Safe detector (VLM) | `ml/detectors/safe.py`: VLM locates the safe once, then every 2 s asks "door open?" on an enlarged crop. **Open ≥ 6 s** → safe_left_open (X-20 caught at 4 s vs label 5 s, no false alarms). **Key left in the lock is not detectable**: a few pixels; single and before/after questions failed, and the behaviour rule also fired on clean X-12/X-25, so it is off (`ML_SAFE_KEY_RULE=1` to enable) | `ml/detectors/safe.py` |
+| Coat/bag on desk (VLM) | `personal_items.py`: VLM on the desk crop every 3 s; item must be absent at the start and then seen with p ≥ 0.9 for ≥ 3 samples (or ≥ 2 until the end). Catches X-40 (and the cash bag in X-17), no false alarms | `ml/detectors/personal_items.py` |
+| Deployment prep | `deploy/run_server.sh` (service on GPU 1, VLM on, offline, localhost only) and `deploy/run_tunnel.sh` (Cloudflare Tunnel). Jury API key generated and stored in the server's project `.env` | `deploy/` |
 | Dev tooling | `eval/cache_detections.py` caches RT-DETR detections; `ML_OBJECTS_CACHE=out/cache/objects python -m eval.run_eval` reuses them, so a full evaluation takes about 3 min instead of 15 | `eval/` |
 | Data findings | **X-4 = X-47 and X-5 = X-48 are identical files** (40 unique videos; X-4 holds 2 violations at 57 s and 68 s). Labels mark the moment the teller *gets up*, not when she leaves the room | `data/labels.csv` (`duplicate_of`) |
 

@@ -46,6 +46,9 @@ def warmup() -> None:
     """Load all models once (called by the backend worker at start-up)."""
     objects.warmup()
     zeroshot.warmup()
+    if os.environ.get("ML_USE_VLM") == "1":
+        from .perception import vlm
+        vlm.warmup()
 
 
 def _cached_objects(ctx: Context) -> list[list[dict]] | None:

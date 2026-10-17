@@ -53,6 +53,7 @@ CHECKS = {
 
 MODELS = {
     "qwen3vl2b": ("Qwen/Qwen3-VL-2B-Instruct", True),
+    "qwen3vl8b": ("Qwen/Qwen3-VL-8B-Instruct", False),
     "smolvlm2": ("HuggingFaceTB/SmolVLM2-500M-Video-Instruct", False),
 }
 
@@ -69,7 +70,7 @@ def build(name):
         kwargs["quantization_config"] = BitsAndBytesConfig(
             load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.float16)
     else:
-        kwargs["torch_dtype"] = torch.float16
+        kwargs["dtype"] = torch.bfloat16
     proc = AutoProcessor.from_pretrained(mid)
     model = AutoModelForImageTextToText.from_pretrained(mid, **kwargs).eval()
 
@@ -79,7 +80,7 @@ def build(name):
         inputs = proc.apply_chat_template(messages, add_generation_prompt=True, tokenize=True,
                                           return_dict=True, return_tensors="pt").to(model.device)
         if "pixel_values" in inputs and not four_bit:
-            inputs["pixel_values"] = inputs["pixel_values"].to(torch.float16)
+            inputs["pixel_values"] = inputs["pixel_values"].to(torch.bfloat16)
         with torch.no_grad():
             out = model.generate(**inputs, max_new_tokens=6, do_sample=False)
         text = proc.batch_decode(out[:, inputs["input_ids"].shape[1]:],

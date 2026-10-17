@@ -4,6 +4,10 @@ RT-DETR "cup"/"bottle" is reliable here (>= 2 s only in X-46, at most 1 frame in
 videos). Its "handbag"/"cell phone" classes are not usable: they fire on the counting
 machine and the desk telephone.
 """
+import os
+
+import numpy as np
+
 from .. import scene
 from ..events import Event
 from . import Context, register
@@ -17,8 +21,66 @@ STRONG_SCORE = 0.55
 MIN_MOVE_PX = 10
 
 
+BELONGINGS_Q = "Is there a coat, jacket, handbag or backpack lying on this desk?"
+# Items placed on the desk stay there (X-40: >= 0.99 to the end); clean false hits are brief
+# (X-12: two samples, then gone) or weak (X-16: <= 0.78).
+BELONGINGS_P = 0.9
+BELONGINGS_SAMPLE_SEC = 3.0
+BELONGINGS_MIN_HITS = 3     # consecutive samples ...
+BELONGINGS_MIN_HITS_AT_END = 2  # ... or fewer if they run to the end of the video
+BELONGINGS_BASELINE = 2     # first samples must be clear: the item has to *appear*
+
+
+def _desk_crop_box(ctx: Context):
+    laptop = ctx.extras.get("laptop")
+    boxes = [max(p, key=lambda b: (b[2] - b[0]) * (b[3] - b[1])) for p in ctx.extras["people"] if p]
+    if laptop is None or not boxes:
+        return None
+    t = np.median(np.array(boxes), axis=0)
+    x1, y1 = min(t[0], laptop[0]), min(t[1], laptop[1])
+    x2, y2 = max(t[2], laptop[2]), max(t[3], laptop[3])
+    mx, my = 0.3 * (x2 - x1), 0.3 * (y2 - y1)
+    return [max(0, x1 - mx), max(0, y1 - my), min(ctx.info.width, x2 + mx),
+            min(ctx.info.height, y2 + my)]
+
+
+def _belongings(ctx: Context) -> list[Event]:
+    """VLM on the desk crop: a coat or bag newly placed on the desk (X-40)."""
+    if os.environ.get("ML_USE_VLM") != "1":
+        return []
+    from ..perception import vlm
+    box = _desk_crop_box(ctx)
+    if box is None:
+        return []
+    times = ctx.extras["times"]
+    step = max(1, round(BELONGINGS_SAMPLE_SEC * len(times) / max(1e-6, times[-1] - times[0])))
+    samples = [(t, vlm.p_yes(vlm.crop(f, box, pad=0.0), BELONGINGS_Q))
+               for t, f in ctx.frames[::step]]
+    if len(samples) <= BELONGINGS_BASELINE or any(p >= BELONGINGS_P for _, p in samples[:BELONGINGS_BASELINE]):
+        return []
+    for k in range(BELONGINGS_BASELINE, len(samples)):
+        run = 0
+        while k + run < len(samples) and samples[k + run][1] >= BELONGINGS_P:
+            run += 1
+        to_end = k + run == len(samples)
+        if run >= BELONGINGS_MIN_HITS or (to_end and run >= BELONGINGS_MIN_HITS_AT_END):
+            t = samples[k][0]
+            return [Event(
+                "personal_items", t, confidence=0.6,
+                observation=(f"С {t:.0f} с на кассовом столе лежат личные вещи (верхняя одежда "
+                             f"и/или сумка), которых не было в начале записи"),
+                evidence_times=[samples[k + 1][0]],
+                boxes={samples[k + 1][0]: [(*box, "личные вещи")]},
+            )]
+    return []
+
+
 @register("personal_items")
 def detect(ctx: Context) -> list[Event]:
+    return _drinks(ctx) + _belongings(ctx)
+
+
+def _drinks(ctx: Context) -> list[Event]:
     times, dets = ctx.extras["times"], ctx.extras["objects"]
     found = [[d for d in f if d["label"] in DRINK_LABELS and d["score"] >= MIN_SCORE]
              for f in dets]
@@ -33,9 +95,8 @@ def detect(ctx: Context) -> list[Event]:
         i = span[0]
         events.append(Event(
             "personal_items", start, t_end=end, confidence=0.6,
-            observation=(f"На рабочем месте кассира находится посуда с напитком/едой "
-                         f"(чашка или бутылка), видна с {start:.0f} по {end:.0f} с; "
-                         f"рядом находятся наличные или кассовое оборудование"),
+            observation=(f"На рабочем месте кассира находится посуда для напитков/еды "
+                         f"(чашка или бутылка), видна с {start:.0f} по {end:.0f} с"),
             evidence_times=[min(end, start + 1.5)],
             boxes={times[i]: [(*b, "чашка") for b in boxes[i]]},
         ))
