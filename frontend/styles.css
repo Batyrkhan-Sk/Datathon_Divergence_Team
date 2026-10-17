@@ -302,17 +302,52 @@ main { flex: 1; padding-top: 32px; padding-bottom: 48px; }
   opacity: 1; visibility: visible; transform: none;
 }
 
-/* ---------- result: scene overlay ---------- */
+/* ---------- result: what was checked ---------- */
 
-.scene-card {
+.checks-card {
   margin-top: 16px;
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius); box-shadow: var(--shadow);
   padding: 16px;
 }
-.scene-card .col-title { margin-bottom: 4px; }
-.scene-note { color: var(--muted); font-size: .82rem; margin-bottom: 10px; }
-.scene-img { display: block; width: 100%; height: auto; border-radius: var(--radius-sm); background: #000; }
+.checks-card .col-title { margin-bottom: 8px; }
+.checks { list-style: none; margin: 0; padding: 0; }
+.check {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 9px 0; border-top: 1px solid var(--border);
+  font-size: .9rem;
+}
+.check:first-child { border-top: 0; }
+.check-icon {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; margin-top: 1px; border-radius: 50%;
+}
+.check-icon svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.check.is-found .check-icon { background: var(--warn-bg); color: var(--warn); }
+.check.is-clear .check-icon { background: var(--ok-bg); color: var(--ok); }
+.check.is-not_checked .check-icon { background: #eef0f4; color: #8d95a6; }
+.check-body { flex: 1; min-width: 0; }
+.check-label { display: block; font-weight: 600; line-height: 1.35; }
+.check.is-not_checked .check-label { color: var(--muted); font-weight: 500; }
+.check-note { display: block; color: var(--muted); font-size: .8rem; line-height: 1.35; margin-top: 1px; }
+.check-status { flex: none; color: var(--muted); font-size: .8rem; white-space: nowrap; padding-top: 2px; }
+.check.is-found .check-status { color: var(--warn); font-weight: 600; }
+.check-seek {
+  padding: 0; border: 0; background: none; cursor: pointer;
+  font: inherit; color: inherit; text-decoration: underline; text-underline-offset: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.checks-manual {
+  margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--border);
+  color: var(--muted); font-size: .8rem; line-height: 1.4;
+}
+.scene-details { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.scene-details summary {
+  cursor: pointer; color: var(--accent); font-weight: 600; font-size: .88rem; width: max-content;
+}
+.scene-details[open] summary { margin-bottom: 8px; }
+.scene-note { color: var(--muted); font-size: .8rem; margin-bottom: 8px; }
+.scene-img { display: block; width: 100%; max-width: 340px; height: auto; border-radius: var(--radius-sm); background: #000; }
 .scene-legend { list-style: none; display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: .82rem; color: var(--muted); }
 .scene-legend li { display: inline-flex; align-items: center; gap: 6px; }
 .scene-swatch { width: 12px; height: 12px; border-radius: 3px; border: 2px solid; }

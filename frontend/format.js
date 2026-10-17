@@ -161,12 +161,30 @@
         .map(function (o) { return o && typeof o.label === 'string' ? o.label : null; })
         .filter(function (l, i, arr) { return l && arr.indexOf(l) === i; })
     } : null;
+    var rawChecks = job && job.checks;
+    var checks = (rawChecks && Array.isArray(rawChecks.items)) ? {
+      items: rawChecks.items.filter(function (i) {
+        return i && typeof i.label === 'string' &&
+          (i.status === 'found' || i.status === 'clear' || i.status === 'not_checked');
+      }).map(function (i) {
+        return {
+          typeId: typeof i.type_id === 'string' ? i.type_id : null,
+          label: i.label,
+          status: i.status,
+          note: typeof i.note === 'string' ? i.note : '',
+          timecode: isFiniteNumber(i.timecode_sec) ? i.timecode_sec : null
+        };
+      }),
+      manual: (Array.isArray(rawChecks.manual) ? rawChecks.manual : [])
+        .filter(function (m) { return typeof m === 'string' && m; })
+    } : null;
     return {
       jobId: job && job.job_id ? String(job.job_id) : '',
       isViolation: isViolation,
       violations: isViolation ? violations : [],
       processingSec: isFiniteNumber(job && job.processing_sec) ? job.processing_sec : null,
-      scene: sceneOut
+      scene: sceneOut,
+      checks: checks && checks.items.length ? checks : null
     };
   }
 

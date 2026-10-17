@@ -9,7 +9,7 @@ The result is a hint for a human reviewer, not a legal conclusion.
 
 ## Project status
 
-*Last updated: 2026-10-18, after v16 (workplace fallback without a laptop; deployed at the fixed ngrok URL). **Deadline:
+*Last updated: 2026-10-18, after v17 (UI polish + «Что проверил сервис» checklist; deployed at the fixed ngrok URL). **Deadline:
 2026-10-18 12:00.** This section is updated after every step.*
 
 **Current score (`eval/run_eval.py`, tag `v12`, GPU server, VLM on; LIVE):** recall
@@ -36,7 +36,8 @@ type names limited to what is visible. Submission document: `docs/SUBMISSION.md`
 | v13: robustness fixes | **15/22** | **0/20**; simulated camera changes (`tools/augment_videos.py`): mirror/tilt/zoom 12/22 with 0 FA (v12 had 1 FA each), low-quality camera 7/22, 0 FA |
 | v14: + scene overlay and downloadable report | 15/22 | 0/20 (detections unchanged; 27/27 backend tests) |
 | v15: cup must not be banknotes (wide-crop VLM check) | 13/22 | 0/20; type acc 92%, 85% of timecodes within 2 s. X-4/X-47 no longer flagged: they were only caught via a rolled banknote bundle taken for a cup |
-| **v16 (LIVE): workplace fallback + merge window 8 s** | **13/22** | **0/20**; all 4 camera variants unchanged with 0 FA. If no laptop is visible (new angle), the workplace is taken from where the teller sits most of the time; simulated "laptop hidden" run: **10/22, 0/20** (before: the departure, cash and belongings checks were off without a laptop). Money needs score ≥ 0.15 in that mode (first try: 1 FA on X-23 at 0.09). X-46 now one episode instead of two |
+| v16: workplace fallback + merge window 8 s | 13/22 | 0/20; all 4 camera variants unchanged with 0 FA. If no laptop is visible (new angle), the workplace is taken from where the teller sits most of the time; simulated "laptop hidden" run: **10/22, 0/20** (before: the departure, cash and belongings checks were off without a laptop). Money needs score ≥ 0.15 in that mode (first try: 1 FA on X-23 at 0.09). X-46 now one episode instead of two |
+| **v17 (LIVE): UI polish + checklist** | **13/22** | **0/20** (detections unchanged). Compact verdict, disclaimer as a hover tooltip, new icon, timeline removed, the frame viewer plays the moment in place. «Как сервис понял сцену» replaced by «Что проверил сервис» (`ml/checks.py`, extra `checks` field): found / not found / not checked with the reason per type; scene photo (boxes only) collapsed under it |
 
 Missed: X-22, X-13 (key left in safe: too small to see), X-32 (door left open), X-34
 (client absent), X-1, X-2, X-44 (types unclear). Timecodes of unauthorized_access are ~4–5 s

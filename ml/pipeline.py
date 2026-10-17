@@ -12,7 +12,7 @@ from typing import Callable
 
 import cv2
 
-from . import catalog, evidence, scene
+from . import catalog, checks, evidence, scene
 from .detectors import DETECTORS, Context
 from .events import Event
 from .perception import objects, zeroshot
@@ -119,6 +119,10 @@ def analyze(video_path: str, progress: Callable[[float], None] | None = None,
         scene_view = _scene(ctx)
     except Exception:  # an explanatory extra must never break the result
         scene_view = None
+    try:
+        checklist = checks.build(ctx, events)
+    except Exception:
+        checklist = None
     report(1.0)
     result = {
         "verdict": "violation" if violations else "no_violation",
@@ -127,6 +131,8 @@ def analyze(video_path: str, progress: Callable[[float], None] | None = None,
     }
     if scene_view:
         result["scene"] = scene_view
+    if checklist:
+        result["checks"] = checklist
     return result
 
 
@@ -158,14 +164,11 @@ def _scene(ctx: Context) -> dict | None:
         objects.append(("Сейф", ctx.extras["safe"]))
     objects += [("Человек", b) for b in people[k]]
     img = frame.copy()
+    # Boxes only: text tags overlap in a crowded room;
+    # the UI legend explains the colours.
     for label, (x1, y1, x2, y2) in objects:
-        color = SCENE_COLORS[label]
-        cv2.rectangle(img, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
-        (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.45, 1)
-        ty = max(th + 6, int(y1))
-        cv2.rectangle(img, (int(x1), ty - th - 6), (int(x1) + tw + 6, ty), (30, 30, 30), -1)
-        cv2.putText(img, label, (int(x1) + 3, ty - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 1,
-                    cv2.LINE_AA)
+        cv2.rectangle(img, (int(x1), int(y1)), (int(x2), int(y2)), SCENE_COLORS[label], 2,
+                      cv2.LINE_AA)
     ok, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 85])
     if not ok:
         return None

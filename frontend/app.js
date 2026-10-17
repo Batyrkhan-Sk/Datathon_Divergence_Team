@@ -404,10 +404,11 @@
     list.hidden = n === 0;
     $('findings-title').textContent = r.isViolation ? 'Эпизоды для проверки' : 'Итог проверки';
     $('clean-note').hidden = r.isViolation;
+    $('clean-checks-hint').hidden = !r.checks;
     $('disclaimer-extra').hidden = !n;
 
     setupVideo(state.file, r.violations);
-    renderScene(r.scene);
+    renderChecks(r.checks, r.scene, r.violations);
     showView('result', 'verdict-title');
     announce(title + (r.isViolation && n ? '. Эпизодов: ' + n + '.' : '.'));
   }
@@ -421,9 +422,56 @@
     'Человек': 'rgb(150,150,150)'
   };
 
+  var CHECK_ICONS = {
+    found: 'M12 6v7.5m0 4v.5',
+    clear: 'M6 12.5l4 4 8-8.5',
+    not_checked: 'M7 12h10'
+  };
+  var CHECK_STATUS = { found: 'найдено', clear: 'не обнаружено', not_checked: 'не проверено' };
+
+  function renderChecks(checks, scene, violations) {
+    var card = $('checks-card');
+    var list = $('checks-list');
+    list.textContent = '';
+    if (!checks && !scene) { card.hidden = true; return; }
+    (checks ? checks.items : []).forEach(function (c) {
+      var status;
+      var vIndex = -1;
+      violations.forEach(function (v, i) { if (vIndex < 0 && v.typeId && v.typeId === c.typeId) vIndex = i; });
+      if (c.status === 'found' && c.timecode !== null && vIndex >= 0) {
+        status = el('button', {
+          type: 'button', class: 'check-seek',
+          'aria-label': c.label + ': перейти к эпизоду ' + (vIndex + 1) + ', ' + Fmt.formatTimecode(c.timecode),
+          text: Fmt.formatTimecode(c.timecode),
+          onclick: function () { seekTo(c.timecode, vIndex); }
+        });
+      } else {
+        status = document.createTextNode(CHECK_STATUS[c.status]);
+      }
+      list.appendChild(el('li', { class: 'check is-' + c.status }, [
+        el('span', { class: 'check-icon', 'aria-hidden': 'true' }, [svgIcon(CHECK_ICONS[c.status])]),
+        el('span', { class: 'check-body' }, [
+          el('span', { class: 'check-label', text: c.label }),
+          c.note ? el('span', { class: 'check-note', text: c.note }) : null
+        ]),
+        el('span', { class: 'check-status' }, [
+          c.status === 'found' ? document.createTextNode('найдено · ') : null, status
+        ].filter(Boolean))
+      ]));
+    });
+    var manual = $('checks-manual');
+    manual.hidden = !(checks && checks.manual.length);
+    if (!manual.hidden) {
+      manual.textContent = 'Проверяется по записи сотрудником: ' + checks.manual.join(', ') + '.';
+    }
+    renderScene(scene);
+    card.hidden = false;
+  }
+
   function renderScene(scene) {
-    var card = $('scene-card');
-    if (!scene) { card.hidden = true; return; }
+    var box = $('scene-details');
+    if (!scene) { box.hidden = true; return; }
+    box.open = false;
     $('scene-img').src = scene.src;
     var legend = $('scene-legend');
     legend.textContent = '';
@@ -434,7 +482,7 @@
         el('span', { text: label })
       ]));
     });
-    card.hidden = false;
+    box.hidden = false;
   }
 
   /* ---------- downloadable report (self-contained HTML, opens offline, prints to PDF) ---------- */
@@ -449,7 +497,7 @@
     var fileName = state.file ? state.file.name : '';
     var now = new Date();
     var when = now.toLocaleString('ru-RU');
-    var verdict = r.isViolation ? 'Обнаружены признаки возможных нарушений' : 'Нарушение не обнаружено';
+    var verdict = r.isViolation ? 'Найдены возможные нарушения' : 'Нарушений не найдено';
     var items = r.violations.map(function (v, i) {
       var rule = v.rule ? (
         '<div class="rule"><div class="rule-title">Нормативное основание</div>' +
@@ -468,9 +516,19 @@
         (v.description ? '<p>' + esc(v.description) + '</p>' : '') +
         (frames ? '<div class="frames">' + frames + '</div>' : '') + rule + '</section>';
     }).join('');
+    var checks = r.checks ? (
+      '<section class="ep"><h2>Что проверил сервис</h2><table class="checks">' +
+      r.checks.items.map(function (c) {
+        return '<tr class="c-' + esc(c.status) + '"><td>' + esc(c.label) +
+          (c.note ? '<div class="cnote">' + esc(c.note) + '</div>' : '') + '</td><td class="cst">' +
+          esc(CHECK_STATUS[c.status]) + (c.status === 'found' && c.timecode !== null
+            ? ' · ' + esc(Fmt.formatTimecode(c.timecode)) : '') + '</td></tr>';
+      }).join('') + '</table>' +
+      (r.checks.manual.length ? '<p class="meta">Проверяется по записи сотрудником: ' +
+        esc(r.checks.manual.join(', ')) + '.</p>' : '') + '</section>') : '';
     var scene = r.scene ? (
-      '<section class="ep"><h2>Как сервис понял сцену</h2>' +
-      '<p class="meta">Объекты найдены автоматически для этой записи: ' + esc(r.scene.labels.join(', ')) + '</p>' +
+      '<section class="ep"><h2>Найденные объекты сцены</h2>' +
+      '<p class="meta">Найдены автоматически для этой записи: ' + esc(r.scene.labels.join(', ')) + '</p>' +
       '<div class="frames"><figure><img src="' + esc(r.scene.src) + '" alt=""></figure></div></section>') : '';
     var css = 'body{font:15px/1.5 "Segoe UI",Arial,sans-serif;color:#1b2130;max-width:900px;margin:24px auto;padding:0 16px}' +
       'h1{font-size:22px;margin:0 0 4px}h2{font-size:17px;margin:0 0 6px}.meta{color:#5a6376;margin:2px 0 8px}' +
@@ -480,7 +538,10 @@
       '.frames{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0}figure{margin:0}img{max-height:320px;border-radius:6px;display:block}' +
       'figcaption{font-size:12px;color:#5a6376;text-align:center}.rule{background:#f8f9fb;border-radius:8px;padding:10px 14px;margin-top:8px}' +
       '.rule-title{font-weight:600;margin-bottom:4px}blockquote{margin:6px 0;padding-left:10px;border-left:3px solid #c5cbd6;color:#3a4252}' +
-      '.note{color:#5a6376;font-size:13px;margin-top:20px}';
+      '.note{color:#5a6376;font-size:13px;margin-top:20px}' +
+      'table.checks{border-collapse:collapse;width:100%}table.checks td{padding:6px 4px;border-top:1px solid #dde1e8;vertical-align:top}' +
+      '.cst{white-space:nowrap;text-align:right;color:#5a6376}.c-found .cst{color:#b3261e;font-weight:600}' +
+      '.c-clear .cst{color:#17703f}.cnote{font-size:12px;color:#5a6376}';
     return '<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Отчёт — ' + esc(fileName) +
       '</title><style>' + css + '</style></head><body>' +
       '<h1>Контроль кассовой дисциплины — отчёт</h1>' +
@@ -488,7 +549,7 @@
       (r.processingSec !== null ? ' · Время обработки: ' + esc(Fmt.formatDuration(r.processingSec)) : '') + '</p>' +
       '<div class="verdict ' + (r.isViolation ? 'v-bad' : 'v-ok') + '">' + esc(verdict) +
       (r.isViolation ? ' · Эпизодов: ' + r.violations.length : '') + '</div>' +
-      items + scene +
+      items + checks + scene +
       '<p class="note">Результат — подсказка для проверяющего сотрудника, а не окончательное юридическое ' +
       'или дисциплинарное заключение. Каждый эпизод нужно проверить по записи.</p></body></html>';
   }

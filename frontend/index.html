@@ -152,23 +152,26 @@
               доступны в списке.
             </p>
           </div>
-          <div class="scene-card" id="scene-card" hidden>
-            <h2 class="col-title">Как сервис понял сцену</h2>
-            <p class="scene-note">Объекты найдены автоматически для этой записи, без заранее заданных
-              координат, поэтому сервис работает и при другом ракурсе камеры.</p>
-            <img class="scene-img" id="scene-img" alt="Кадр записи с найденными объектами сцены">
-            <ul class="scene-legend" id="scene-legend"></ul>
-          </div>
         </div>
 
         <div class="findings-col">
           <h2 class="col-title" id="findings-title">Эпизоды</h2>
           <ol class="findings" id="findings" aria-labelledby="findings-title"></ol>
           <div class="clean-note" id="clean-note" hidden>
-            <p>В записи не найдено признаков нарушений из перечня, который проверяет сервис:
-              оставленные без присмотра наличные, открытый сейф, посторонние в кассовой зоне,
-              незаблокированная рабочая станция и другие.</p>
+            <p>В записи не найдено признаков нарушений.<span id="clean-checks-hint"> Что именно проверено — в списке ниже.</span></p>
             <p>Если у вас есть сомнения, просмотрите запись вручную.</p>
+          </div>
+          <div class="checks-card" id="checks-card" hidden>
+            <h2 class="col-title">Что проверил сервис</h2>
+            <ul class="checks" id="checks-list"></ul>
+            <p class="checks-manual" id="checks-manual" hidden></p>
+            <details class="scene-details" id="scene-details" hidden>
+              <summary>Показать найденные объекты</summary>
+              <p class="scene-note">Рабочее место, стол и сейф найдены автоматически для этой записи,
+                без заранее заданных координат, поэтому сервис работает и при другом ракурсе камеры.</p>
+              <img class="scene-img" id="scene-img" alt="Кадр записи с найденными объектами сцены">
+              <ul class="scene-legend" id="scene-legend"></ul>
+            </details>
           </div>
         </div>
       </div>

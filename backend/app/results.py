@@ -107,6 +107,10 @@ def normalize(raw: dict, video_path: str) -> dict:
         result["scene"] = {"timestamp_sec": _clamp(_num(scene.get("timestamp_sec"), 0.0), duration),
                            "image_base64": b64,
                            "objects": [o for o in scene.get("objects") or [] if isinstance(o, dict)]}
+    checks = raw.get("checks")
+    if isinstance(checks, dict) and isinstance(checks.get("items"), list):
+        result["checks"] = {"items": [i for i in checks["items"] if isinstance(i, dict)],
+                            "manual": [m for m in checks.get("manual") or [] if isinstance(m, str)]}
     return result
 
 
@@ -121,6 +125,8 @@ def render(job, strict: bool, queue_position: int = 0) -> dict:
             body["processing_sec"] = job.result["processing_sec"]
         if not strict and "scene" in job.result:
             body["scene"] = job.result["scene"]
+        if not strict and "checks" in job.result:
+            body["checks"] = job.result["checks"]
     elif status == "processing" and not strict:
         body["progress"] = round(job.progress, 3)
         body["queue_position"] = queue_position
