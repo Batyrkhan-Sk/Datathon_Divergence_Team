@@ -411,6 +411,9 @@
     renderChecks(r.checks, r.scene, r.violations);
     showView('result', 'verdict-title');
     announce(title + (r.isViolation && n ? '. Эпизодов: ' + n + '.' : '.'));
+    if (window.StarBasic) {
+      window.StarBasic.attach({ result: r, video: video, cardsRoot: $('findings'), bannerEl: $('verdict') });
+    }
   }
 
   // Colours match the boxes drawn by the server (ml/pipeline.py SCENE_COLORS, BGR there).

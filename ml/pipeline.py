@@ -12,7 +12,7 @@ from typing import Callable
 
 import cv2
 
-from . import catalog, checks, evidence, scene
+from . import catalog, checks, evidence, quality, risk, scene, timeline, trajectory
 from .detectors import DETECTORS, Context
 from .events import Event
 from .perception import objects, zeroshot
@@ -90,6 +90,11 @@ def analyze(video_path: str, progress: Callable[[float], None] | None = None,
     report = progress or (lambda p: None)
     info = probe(video_path)
 
+    try:
+        quality_report = quality.check(video_path)
+    except Exception:
+        quality_report = None
+
     report(0.05)
     frames = list(iter_frames(video_path, SAMPLE_FPS))
     ctx = Context(info=info, frames=frames)
@@ -113,7 +118,8 @@ def analyze(video_path: str, progress: Callable[[float], None] | None = None,
             "confidence": round(e.confidence, 3),
             "description": _describe(e, rule),
             "rule": rule,
-            "evidence_frames": evidence.frames_for(video_path, e, info.duration),
+            "evidence_frames": evidence.frames_for(
+                video_path, e, info.duration, ctx.extras.get("laptop")),
         })
     try:
         scene_view = _scene(ctx)
@@ -128,7 +134,29 @@ def analyze(video_path: str, progress: Callable[[float], None] | None = None,
         "verdict": "violation" if violations else "no_violation",
         "violations": violations,
         "processing_sec": round(time.time() - started, 2),
+        "video_duration_sec": round(info.duration, 1),
     }
+    risk.add_risk(result)
+    try:
+        tl = timeline.build(ctx, violations)
+        if tl:
+            result["timeline"] = tl
+    except Exception:
+        pass
+    if quality_report:
+        result["quality"] = quality_report.to_dict()
+    try:
+        times_list = ctx.extras.get("times") or []
+        people_list = ctx.extras.get("people") or []
+        if times_list and people_list:
+            mid_idx = len(ctx.frames) // 2
+            _, mid_frame = ctx.frames[mid_idx]
+            traj_b64 = trajectory.build_map(mid_frame, times_list, people_list)
+            if traj_b64:
+                result["trajectory_map"] = {"image_base64": traj_b64,
+                                            "timestamp_sec": round(times_list[mid_idx], 2)}
+    except Exception:
+        pass
     if scene_view:
         result["scene"] = scene_view
     if checklist:

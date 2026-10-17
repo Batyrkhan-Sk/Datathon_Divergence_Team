@@ -3,6 +3,7 @@ import base64
 
 import cv2
 
+from . import privacy
 from .events import Event
 from .video import read_frame_at
 
@@ -26,7 +27,8 @@ def _draw(frame, boxes):
     return frame
 
 
-def frames_for(video_path: str, event: Event, duration: float) -> list[dict]:
+def frames_for(video_path: str, event: Event, duration: float,
+               laptop_box: list[float] | None = None) -> list[dict]:
     times = [event.t_start] + [t for t in event.evidence_times if t != event.t_start]
     out = []
     for t in times[:MAX_FRAMES]:
@@ -35,6 +37,7 @@ def frames_for(video_path: str, event: Event, duration: float) -> list[dict]:
         if frame is None:
             continue
         frame = _draw(frame, _nearest_boxes(event, t))
+        frame = privacy.redact(frame, laptop_box)
         ok, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY])
         if ok:
             out.append({"timestamp_sec": round(t, 2),

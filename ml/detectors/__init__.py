@@ -33,4 +33,4 @@ def register(name: str):
 
 
 # Detector modules register themselves on import.
-from . import crowd, personal_items, safe, workplace  # noqa: E402,F401
+from . import camera_tamper, crowd, personal_items, safe, workplace  # noqa: E402,F401

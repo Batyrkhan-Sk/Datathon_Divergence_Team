@@ -1,0 +1,142 @@
+/* Shared styles for star-feature enhancements */
+
+/* ★19 Time savings line */
+.sb-savings {
+  text-align: center;
+  font-size: 0.875rem;
+  color: #17703f;
+  font-weight: 500;
+  margin: 0 0 0.75rem;
+  letter-spacing: 0.01em;
+}
+
+/* ★14 Risk level badges */
+.sb-risk {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-left: 8px;
+  vertical-align: middle;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.sb-risk--high   { background: #fde8e8; color: #b3261e; border: 1px solid #f2c3bd; }
+.sb-risk--medium { background: #fef3e2; color: #8a5c00; border: 1px solid #f5d89a; }
+.sb-risk--low    { background: #eaf6ef; color: #17703f; border: 1px solid #b5dfc5; }
+
+/* ★18 Signal timeline strip */
+.sp-timeline-wrap {
+  margin: 6px 0 2px;
+}
+.sp-timeline {
+  position: relative;
+  height: 10px;
+  background: #f0f2f5;
+  border-radius: 5px;
+  overflow: hidden;
+  cursor: pointer;
+}
+.sp-seg {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  opacity: 0.85;
+}
+.sp-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 5px;
+  font-size: 0.75rem;
+  color: #5a6376;
+}
+.sp-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.sp-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ★8 / ★9 System view: quality warning + trajectory card */
+.sp-quality-warn {
+  padding: 8px 14px;
+  background: #fff8e1;
+  border: 1px solid #f5d89a;
+  border-radius: 8px;
+  margin: 0 0 0.75rem;
+  font-size: 0.875rem;
+  color: #5a4000;
+}
+.sp-quality-issue--error { color: #b3261e; }
+.sp-quality-issue--warning { color: #8a5c00; }
+.sp-traj-card {
+  margin-top: 1rem;
+}
+
+/* ★17 Keyboard shortcuts help overlay */
+.sb-help-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sb-help-box {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px 28px;
+  max-width: 360px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+}
+.sb-help-box h2 {
+  font-size: 1rem;
+  margin: 0 0 14px;
+  color: #1b2130;
+}
+.sb-help-box table {
+  border-collapse: collapse;
+  width: 100%;
+}
+.sb-help-box td {
+  padding: 5px 4px;
+  font-size: 0.875rem;
+  color: #3a4252;
+}
+.sb-help-box td:first-child {
+  width: 60px;
+}
+.sb-help-box kbd {
+  display: inline-block;
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  padding: 2px 7px;
+  border: 1px solid #c5cbd6;
+  border-radius: 4px;
+  background: #f8f9fb;
+  color: #1b2130;
+  min-width: 1.8rem;
+  text-align: center;
+}
+.sb-help-close {
+  margin-top: 16px;
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #dde1e8;
+  border-radius: 6px;
+  background: #f8f9fb;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: #3a4252;
+}
+.sb-help-close:hover { background: #eef0f5; }

@@ -132,6 +132,7 @@
           quote: typeof v.rule.quote === 'string' ? v.rule.quote : '',
           url: safeHttpUrl(v.rule.url)
         } : null,
+        riskLevel: typeof v.risk_level === 'string' ? v.risk_level : null,
         frames: frames.filter(function (f) {
           return f && typeof f.image_base64 === 'string' && f.image_base64.length > 0;
         }).map(function (f) {
@@ -183,8 +184,13 @@
       isViolation: isViolation,
       violations: isViolation ? violations : [],
       processingSec: isFiniteNumber(job && job.processing_sec) ? job.processing_sec : null,
+      videoDurationSec: isFiniteNumber(job && job.video_duration_sec) ? job.video_duration_sec : null,
       scene: sceneOut,
-      checks: checks && checks.items.length ? checks : null
+      checks: checks && checks.items.length ? checks : null,
+      timeline: Array.isArray(job && job.timeline) ? job.timeline : null,
+      quality: (job && job.quality && typeof job.quality === 'object') ? job.quality : null,
+      trajectory_map: (job && job.trajectory_map && typeof job.trajectory_map === 'object')
+        ? job.trajectory_map : null
     };
   }
 

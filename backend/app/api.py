@@ -15,6 +15,8 @@ from starlette.formparsers import MultiPartException
 
 from ml.video import probe, read_frame_at
 
+from .audit import AuditLog
+from .clips import make_clip_router
 from .config import Settings
 from .results import render
 from .store import Store
@@ -85,6 +87,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     uploads = s.storage_dir / "uploads"
     uploads.mkdir(parents=True, exist_ok=True)
     store = Store(s.storage_dir / "jobs.db")
+    audit = AuditLog(s.storage_dir / "audit.db", s.api_key or "")
+    audit.attach(store)
     supervisor = Supervisor(store, s.analyzer, s.job_timeout_sec, s.load_timeout_sec)
     ui_limiter = RateLimiter(s.ui_uploads_per_min)
     max_bytes = s.max_upload_mb * 1024 * 1024
@@ -101,6 +105,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         yield
         supervisor.stop()
         store.close()
+        audit.close()
 
     app = FastAPI(title="ForteBank Datathon 26: violation detection API", lifespan=lifespan)
     app.state.settings, app.state.store, app.state.supervisor = s, store, supervisor
@@ -196,6 +201,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if job is None or job.source != "ui" or not Path(job.video_path).is_file():
             raise HTTPException(404, "video not found")
         return FileResponse(job.video_path, media_type="video/mp4")
+
+    app.include_router(audit.router(store))
+    app.include_router(make_clip_router(store))
+    try:
+        from ml.search import make_search_router
+        app.include_router(make_search_router(store))
+    except ImportError:
+        log.warning("ml.search not available (SigLIP2 optional)")
+
 
     # Frontend last, so the API routes win.
     if s.frontend_dir.is_dir():

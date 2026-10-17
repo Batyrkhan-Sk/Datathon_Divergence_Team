@@ -96,6 +96,8 @@ def normalize(raw: dict, video_path: str) -> dict:
             out["confidence"] = round(min(max(_num(v["confidence"], 0.0), 0.0), 1.0), 3)
         if "rule" in v:
             out["rule"] = v["rule"] if isinstance(v["rule"], dict) else None
+        if isinstance(v.get("risk_level"), str):
+            out["risk_level"] = v["risk_level"]
         violations.append(out)
 
     violations.sort(key=lambda x: x["timecode_sec"])
@@ -111,6 +113,19 @@ def normalize(raw: dict, video_path: str) -> dict:
     if isinstance(checks, dict) and isinstance(checks.get("items"), list):
         result["checks"] = {"items": [i for i in checks["items"] if isinstance(i, dict)],
                             "manual": [m for m in checks.get("manual") or [] if isinstance(m, str)]}
+    dur = raw.get("video_duration_sec")
+    if dur is not None:
+        result["video_duration_sec"] = round(_num(dur, 0.0), 1)
+    qr = raw.get("quality")
+    if isinstance(qr, dict):
+        result["quality"] = qr
+    tl = raw.get("timeline")
+    if isinstance(tl, list):
+        result["timeline"] = tl
+    tmap = raw.get("trajectory_map")
+    if isinstance(tmap, dict) and (b64 := as_jpeg_base64(tmap.get("image_base64"))):
+        result["trajectory_map"] = {"image_base64": b64,
+                                    "timestamp_sec": _num(tmap.get("timestamp_sec", 0), 0.0)}
     return result
 
 
@@ -127,6 +142,14 @@ def render(job, strict: bool, queue_position: int = 0) -> dict:
             body["scene"] = job.result["scene"]
         if not strict and "checks" in job.result:
             body["checks"] = job.result["checks"]
+        if not strict and "video_duration_sec" in job.result:
+            body["video_duration_sec"] = job.result["video_duration_sec"]
+        if not strict and "quality" in job.result:
+            body["quality"] = job.result["quality"]
+        if not strict and "timeline" in job.result:
+            body["timeline"] = job.result["timeline"]
+        if not strict and "trajectory_map" in job.result:
+            body["trajectory_map"] = job.result["trajectory_map"]
     elif status == "processing" and not strict:
         body["progress"] = round(job.progress, 3)
         body["queue_position"] = queue_position
