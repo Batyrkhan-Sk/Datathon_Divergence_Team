@@ -233,9 +233,9 @@ python tools/zoom.py data/raw/X-1.mov 19 24 0.5 0 0.3 0.7 0.6 out/zoom/X-1.jpg
 
 | Role | Area |
 |---|---|
-| ML engineer | @batyr_ssh |
+| ML engineer | video analysis pipeline, models, evaluation |
 | Backend engineer | API, job processing, deployment |
-| Frontend engineer | @batyr_ssh |
+| Frontend engineer | user interface |
 
 Start with `docs/internal/PLAN.md`: architecture, task split, milestones, risks.
 Analysis notes are in `docs/internal/step1_findings.md`, and the regulation mapping is in
