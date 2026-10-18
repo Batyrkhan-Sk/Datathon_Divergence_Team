@@ -31,6 +31,7 @@ The result is a hint for a human reviewer, not a legal conclusion.
 | v17: UI polish + checklist | 13/22 | 0/20 (detections unchanged). Compact verdict, disclaimer as a hover tooltip, new icon, timeline removed, the frame viewer plays the moment in place. «Как сервис понял сцену» replaced by «Что проверил сервис» (`ml/checks.py`, extra `checks` field): found / not found / not checked with the reason per type; scene photo (boxes only) collapsed under it |
 | v18: adilet deep links | 13/22 | 0/20 (detections unchanged). Rule links open adilet scrolled to the cited clause with it highlighted (text fragment `#:~:text=`, `ml/catalog.deep_link`; checked for all 9 types in Chrome). Timecode buttons play from the timecode; footer and «О результате» label removed (ⓘ tooltip kept) |
 | v19: real frame timestamps | 13/22 | 0/20; timecodes within 2 s 85% → **92%**. Format stress test (15 variants via the API: HEVC, rotation flag, variable fps, 60 fps, 1080p, 4K 12 s, landscape, 4-min video 34 s, .mp4, Cyrillic name, 3 s clip): all processed, same verdict and type. Found: variable frame rate shifted timecodes (10.0 → 6.5 s); fixed by sampling on frame timestamps (`ml/video.py`), duration from ffprobe |
+| v20: legal and wording fixes (teammate review, verified first) | 13/22 | 0/20 (detections unchanged). `workstation_unlocked` now cites АРРФР № 53 п. 26 подп. 1) and п. 53 (п. 71 only as context); НБРК № 14 п. 16 marked as the temporary edition until 01.01.2027; X-33 text says only what the frame shows; adilet deep links can use an `anchor` per source |
 | **v21 (LIVE): external-video check** | **13/22** | **0/20** (eval unchanged). 13 outside clips through the service, no tuning: Edinburgh Office Monitoring (4 real office CCTV excerpts, 90–120 s), 7 Mixkit stock clips (bank desk, checkouts, pharmacy, meeting, safe-deposit boxes, counting machine), 2 public-domain Wikimedia Commons clips (VP9 CCTV, 4K AV1 bodycam, 4 min in 46 s). No crashes, all within the limit. Alarms match the rules: crowd of 3+ people (shop checkout, meeting, bodycam), a real cup on the desk, papers on the desk when the person left (open-vocabulary cash detector cannot tell papers from banknotes). Fixed: same-type episodes now merged by gap from the previous end (one cup was reported twice), crowd text gives the typical count, not one frame's. Camera variants re-run: mirror 12/22, tilt 12/22, zoom 10/22, lower quality 7/22, laptop hidden 10/22, same recall as v16; 0 false alarms except 1 on tilted X-12 (cup, 12 s). Traced to v19 frame sampling (v18 sampling: no alarm; v20 code without the v21 fixes: same alarm), not changed: v19 fixes real timecode drift. Model weights: `deploy/download_models.sh` (tested on an empty cache); 27/27 backend tests |
 
 Missed: X-22, X-13 (key left in safe: too small to see), X-32 (door left open), X-34
@@ -48,7 +49,7 @@ Missed: X-22, X-13 (key left in safe: too small to see), X-32 (door left open), 
 | Evaluation | Misses, false alarms, timecode error, type accuracy and runtime, per video and per layout. Scoring checked with a synthetic oracle | `eval/run_eval.py` |
 | Baseline | Empty pipeline: recall 0 / 22, false alarms 0 / 20, ~0.5 s per video | `out/eval/*-empty-baseline.json` |
 | **Backend** | FastAPI. Jury API exactly per the case (`POST /api/v1/analyze`, `GET /api/v1/jobs/{id}`, `X-API-Key` → 401 otherwise); keyless UI routes `/ui/api/...` with a rate limit. One persistent GPU worker plus a queue, a 240 s hard timeout per job, SQLite store, `ANALYZER=real\|demo`, `STRICT_SCHEMA=1` to strip extras. Output repaired defensively (verdict matches violations; 1–3 JPEG frames). **27/27 tests pass; jury contract checker PASS** (incl. 5 concurrent uploads) | `backend/` (see `backend/README.md`) |
-| **Frontend** | Plain HTML/JS/CSS, no build, works offline, Russian UI. Upload → progress → verdict banner → violation cards (type, timecode, description, rule with adilet link, evidence frames with lightbox) → video player with timeline markers. Mock mode `?mock=1`. Tested in headless Chrome, desktop and mobile | `frontend/` (see `frontend/README.md`) |
+| **Frontend** | Plain HTML/JS/CSS, no build, works offline, Russian UI. Upload → progress → compact verdict (disclaimer in an ⓘ tooltip) → violation cards (type, timecode, description, rule with an adilet deep link to the clause, evidence frames; the lightbox plays the moment in place) → «Что проверил сервис» checklist (found / not found / not checked, with the reason) → video player; timecode buttons play from that moment. Downloadable report. Mock mode `?mock=1`. Tested in headless Chrome, desktop and mobile | `frontend/` (see `frontend/README.md`) |
 | Integration | Backend serves the UI at `/`. UI flow and jury contract checker verified end to end (demo analyzer) | — |
 | Feasibility, detectors | **RT-DETR v2** chosen for people and laptops (best quality, fastest); OWLv2 for text-prompted checks on crops; Grounding DINO rejected (too slow). No detector finds the safe or a key | `docs/internal/feasibility.md` |
 | **First detectors** | `ml/detectors/workplace.py`: teller leaves (stand-up / walk-off onset) → **cash_unattended** (OWLv2 money on desk crop, at desk height, ≥ 2 frames) and **workstation_unlocked** (screen still shows the bright bluish-white app). `ml/detectors/crowd.py`: **≥ 3 people for ≥ 5 s**, or a **second person entering a solo room** (median count 1, stays ≥ 4 s, or ≥ 2.5 s if until video end) → unauthorized_access. `ml/detectors/personal_items.py`: cup/bottle ≥ 2 s that is either confident (≥ 0.55) or moving → personal_items. People seen through or reflected in the glass are filtered by size and position | `ml/` |
@@ -57,48 +58,34 @@ Missed: X-22, X-13 (key left in safe: too small to see), X-32 (door left open), 
 | VLM result (8B) | Qwen3-VL-8B (bf16, GPU server): **12/16** checks, 0.17 s per question, 16.5 GB. Full-frame answers are noisy (confuses the open room door with the safe door), so all VLM use is on **crops** with multi-sample consistency | `out/feasibility/qwen3vl8b/` (server) |
 | Safe detector (VLM) | `ml/detectors/safe.py`: VLM locates the safe once, then every 2 s asks "door open?" on an enlarged crop. **Open ≥ 6 s** → safe_left_open (X-20 caught at 4 s vs label 5 s, no false alarms). **Key left in the lock is not detectable**: a few pixels; single and before/after questions failed, and the behaviour rule also fired on clean X-12/X-25, so it is off (`ML_SAFE_KEY_RULE=1` to enable) | `ml/detectors/safe.py` |
 | Coat/bag on desk (VLM) | `personal_items.py`: VLM on the desk crop every 3 s; item must be absent at the start and then seen with p ≥ 0.9 for ≥ 3 samples (or ≥ 2 until the end). Catches X-40 (and the cash bag in X-17), no false alarms | `ml/detectors/personal_items.py` |
-| **Deployment (LIVE)** | Service on the GPU server (GPU 1, VLM on, offline weights, localhost only) at the **fixed ngrok address https://eggbeater-stardom-unsaid.ngrok-free.dev** (UI at `/`, API at `/api/v1/...`; Cloudflare quick tunnel kept as a backup, its current URL in the server's `logs/public_url.txt`). The jury API key is only in the server's project `.env` (ask the team lead). **Jury contract checker PASS over the public URL** (X-26 → violation in 14.5 s, X-29 → no_violation in 7.4 s). The quick-tunnel URL changes if the tunnel restarts | `deploy/`, server `logs/service.log`, `logs/tunnel.log` |
+| **Deployment (LIVE)** | Service on the GPU server (GPU 1, VLM on, offline weights, localhost only) at the **fixed ngrok address https://eggbeater-stardom-unsaid.ngrok-free.dev** (UI at `/`, API at `/api/v1/...`; Cloudflare quick tunnel kept as a backup, its current URL in the server's `logs/public_url.txt`; `deploy/watchdog.sh` restarts the service and tunnels). The jury API key is only in the server's project `.env` (ask the team lead). **Jury contract checker PASS over the public URL** (v21: X-26 → violation, 3 concurrent jobs in 22.5 s wall time; limit 300 s). The quick-tunnel URL changes if the tunnel restarts | `deploy/`, server `logs/service.log`, `logs/tunnel.log` |
 | Dev tooling | `eval/cache_detections.py` caches RT-DETR detections; `ML_OBJECTS_CACHE=out/cache/objects python -m eval.run_eval` reuses them, so a full evaluation takes about 3 min instead of 15 | `eval/` |
 | Data findings | **X-4 = X-47 and X-5 = X-48 are identical files** (40 unique videos; X-4 holds 2 violations at 57 s and 68 s). Labels mark the moment the teller *gets up*, not when she leaves the room | `data/labels.csv` (`duplicate_of`) |
 
-### Next
-| # | Task | Owner | Why |
-|---|---|---|---|
-| 1 | **More detectors** for the missed videos: X-38 (3 people; the crowd rule misses it), X-4 (person enters while cash on desk, layout A), X-32 (door left open), X-40 (coat and bag on desk: OWLv2 on desk crop), X-20/X-22 (safe: needs VLM), X-34 (client leaves, cash processed), X-47 (hand counting). Also merge same-type events further apart than 3 s (X-46 reports 2) | ML | Recall is 11/22 |
-| 2 | VLM (Qwen3-VL-2B, 4-bit) test and integration: safe / key / cash states, unseen-type checklist, describe the 5 unresolved clips. Weights are downloading slowly (`weights/qwen3-vl-2b/`) | ML | Types no detector can see |
-| 3 | Pipeline fixes from the backend review: add `ml.pipeline.warmup()` (load models at worker start); stream frames instead of `list(iter_frames(...))` (~670 MB RAM for a 143 s video); make `evidence.frames_for` never return 0 frames | ML | Startup time, memory, robustness |
-| 4 | **Time budget:** ≤ ~50 s per video including 143 s clips. The queue runs jobs one at a time, so the 5th of 5 concurrent jury videos waits for the other four | ML | 5-min limit per video |
-| 5 | Leave-one-layout-out evaluation, plus simulated camera angles (perspective warp, flip, zoom) on the training videos | ML | Honest estimate for the new camera angle |
-| 6 | Create the jury `API_KEY` in a root `.env`; public URL via Cloudflare Tunnel; final load test on the real pipeline | Backend | Jury access; 5-min limit under load |
+### Future work
+| Missed type | Videos | Approach |
+|---|---|---|
+| Counting cash by hand | X-1, X-44, X-4 = X-47 | Hand pose (RTMPose) over the desk crop: repeated flicking motion while the counting machine is idle |
+| Key left in the safe | X-13 | Higher-resolution crop of the safe lock, or a small fine-tuned detector for the key |
+| Door left open | X-32 | Locate the room door once (VLM), then ask "door open?" on its crop over time, like the safe rule |
+| Client absent during an operation | X-34 | Track the client side of the desk; flag cash handling while it is empty |
+| Type unclear | X-2, X-22 | Needs clarification of the label before a detector |
 
 **Open questions**
-- Violation types are unknown or uncertain for X-1, X-2, X-13, X-44 and X-17.
-- `workstation_unlocked` has only an indirect legal source so far.
-- The date of the 12:00 deadline has not been confirmed.
+- Violation types are uncertain for X-1, X-2, X-13, X-44 and X-17 (see `docs/internal/step1_findings.md`).
+- `workstation_unlocked` rests on the bank's internal information-security rules referenced by АРРФР № 53 (`legal_confidence: referential`).
 
-### Model recommendations
-*Pre-feasibility: these are candidates, chosen for licence, size and fit with a 4 GB
-GPU. The feasibility test will confirm or replace them.*
+### Models used
+| Job | Model | Licence | How |
+|---|---|---|---|
+| People, laptop, cups | RT-DETRv2-R18 (`PekingU/rtdetr_v2_r18vd`) | Apache-2.0 | Pre-trained COCO, every sampled frame |
+| Cash on the desk | OWLv2 (`google/owlv2-base-patch16-ensemble`) | Apache-2.0 | Text prompts on the desk crop |
+| States on zoomed crops (safe open, coat/bag, cup vs banknotes) | Qwen3-VL-8B-Instruct; Qwen3-VL-2B in 4-bit on a small GPU | Apache-2.0 | Yes/no P(yes) from next-token logits |
 
-| Job | First choice | Alternatives | Licence | Notes |
-|---|---|---|---|---|
-| People detection | RT-DETR-R18 (HF `transformers`) | D-FINE-S, YOLOX-S | Apache-2.0 | Pre-trained COCO `person` is enough; no training needed |
-| Tracking | ByteTrack | OC-SORT | MIT | Tells the teller, client and outsiders apart over time (no faces) |
-| Hands / pose | RTMPose-s | — | Apache-2.0 | Hand position at the safe, laptop, cash or counting machine |
-| Scene objects, zero-shot | OWLv2 | Grounding DINO-T, Florence-2 (MIT) | Apache-2.0 | Text-prompted: safe, door, laptop, counting machine, bag, coat, cup, phone. Used to find zones in each video |
-| **Fine-tune if zero-shot is weak** | **RT-DETR-R18 or D-FINE-S** trained on our frames | RF-DETR-S, YOLOX-S | Apache-2.0 | Small objects: banknotes, coin rolls, cash bag, key in lock. Label ~300–500 frames from `data/frames/` with CVAT or Label Studio (both run locally) |
-| **State classifiers** | **MobileNetV3 / EfficientNet-B0** on crops (torchvision) | — | BSD-3 | Cheapest way to read states: safe door open/closed, laptop screen on/locked, cash on desk yes/no. ~100–200 labelled crops per state |
-| Verification / unseen types | Qwen3-VL-2B *(verify licence)* | SmolVLM2-2.2B, Moondream2, Florence-2 | Apache-2.0 / MIT | Yes/no questions on crops around candidate events only. Keeps within 4 GB and the time budget |
+No model was trained or fine-tuned on the case videos: 42 clips are too few, and the final
+test uses a new camera angle. Rules over time combine the model outputs (`ml/detectors/`).
 
-**Do not use**
-- Ultralytics YOLOv5/v8/v11: AGPL-3.0.
-- Qwen2.5-VL-3B: research licence, not for commercial use.
-- Any cloud API: disqualification.
-
-**Training recommendation:** do not train one end-to-end video model; 42 clips are far
-too few, and it would not survive a new camera angle. Use pre-trained detectors as they
-are, and fine-tune only small parts: a detector for cash-type objects and crop
-classifiers for states. Hold out one layout per round.
+**Not used:** Ultralytics YOLO (AGPL-3.0), Qwen2.5-VL-3B (research licence), any cloud API.
 
 ## Principles
 - **Fully local.** All models run inside the service. No cloud AI APIs are used, and no
@@ -130,9 +117,12 @@ ml/         video analysis pipeline
   detectors/     one module per violation type (register with @register)
   video.py       decoding / sampling with exact timestamps
   evidence.py    evidence frames (JPEG, base64, boxes drawn)
-  catalog.py     violation types and legal citations from data/rules.json
+  catalog.py     violation types and legal citations from data/rules.json, adilet deep links
+  checks.py      «Что проверил сервис» checklist (extra `checks` field)
+  perception/    RT-DETRv2, OWLv2, Qwen3-VL wrappers
 eval/       evaluation on the labelled training set
-tools/      data utilities (frame cache, contact sheets, zoom)
+tools/      data utilities (frame cache, contact sheets, zoom, camera-change augmentation)
+deploy/     start scripts: model download, server, ngrok/Cloudflare tunnels, watchdog
 docs/       documentation
 ```
 
@@ -146,6 +136,7 @@ result = analyze("video.mov", progress=lambda p: ...)   # p in 0..1
 #                  "rule": {"document", "clause", "quote", "url"},
 #                  "evidence_frames": [{"timestamp_sec", "image_base64"}]}],
 #  "processing_sec": float}
+# plus "checks" and "scene" for the UI (removed by the backend when STRICT_SCHEMA=1)
 ```
 
 ### `data/rules.json`: violation catalogue and legal citations
@@ -177,7 +168,7 @@ rule-grounding score.
 
 Create `ml/detectors/<type>.py` with a function `detect(ctx) -> list[Event]`
 decorated with `@register("<type>")`, and import it in `ml/detectors/__init__.py`.
-`ctx.frames` holds sampled `(t_sec, frame)` pairs at 4 fps. `Event` needs a `type_id`
+`ctx.frames` holds sampled `(t_sec, frame)` pairs at 2 fps (`SAMPLE_FPS`), on the video's own timestamps. `Event` needs a `type_id`
 that exists in `data/rules.json`, the onset time, a confidence, and a plain-language
 `observation` of what is visible.
 
@@ -218,6 +209,11 @@ python -m ml.pipeline data/raw/X-26.mov
 
 # evaluate on all labelled videos (or --layouts D E / --videos X-26 X-29)
 python -m eval.run_eval --tag my-change
+
+# simulated camera changes (mirror, tilt, zoom, low quality) -> data/aug/<variant>/, then evaluate one
+python tools/augment_videos.py data/raw data/aug tilt mirror zoom lowq
+python -m eval.run_eval --video-dir data/aug/tilt --ext .mp4 --tag my-change-tilt
+ML_IGNORE_LAPTOP=1 python -m eval.run_eval --tag my-change-nolaptop   # laptop hidden
 
 # cache frames at 4 fps -> data/frames/<video>/ (run once)
 python tools/extract_frames.py data/raw data/frames 4
