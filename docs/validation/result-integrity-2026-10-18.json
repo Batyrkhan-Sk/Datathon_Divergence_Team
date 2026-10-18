@@ -1,0 +1,58 @@
+{
+  "date": "2026-10-18",
+  "timezone": "Asia/Almaty",
+  "branch": "fix/evidence-and-result-integrity",
+  "base_commit": "286927fe0be9b11b38f49279c00925373d0ea123",
+  "working_tree_changes_committed": false,
+  "python": "3.12.14",
+  "packages": {
+    "numpy": "2.5.4",
+    "opencv-python-headless": "5.0.0.93",
+    "pytest": "9.1.1",
+    "fastapi": "0.143.3",
+    "httpx": "0.28.1",
+    "python-dotenv": "1.2.4",
+    "python-multipart": "0.0.32",
+    "uvicorn": "0.54.0"
+  },
+  "source_sha256": {
+    "backend/app/results.py": "9f32b2d5255e4c0ca06f33bfc83a90a4c41f802c47f56b12eda66a9c82b2769e",
+    "ml/video.py": "8cdf265d7a533bc2f18a7b87357a7791b3c2ab62680eef1bf246de5c3145fe40",
+    "ml/evidence.py": "a1da1070ed65007eb930cad5b436bd1055b8360730bc952f2f0c5fb5aac31658",
+    "backend/tests/test_api.py": "51c9fc862f29783a8d6e6e2d529180c13fb65984179af13bc5ad8f219441573e",
+    "backend/tests/conftest.py": "62b416ca16cffc38c41013db150215d43577c5a491bdf9f0278da73ccf4e0f41",
+    "backend/tests/integrity_stubs.py": "0b01231efadac7a946d4d52706375984a80f87f9c66ef80726b9fb6136adf8c8",
+    "backend/tests/test_result_integrity.py": "e76d855106a7ec4534bcd689177bc5d9b835b4a89c9adfb5d0133bf8bc624700"
+  },
+  "tests": {
+    "command": "python -m pytest backend/tests -q -p no:cacheprovider",
+    "passed": 45,
+    "skipped": 27,
+    "elapsed_sec": 2.08,
+    "warnings": 1,
+    "warning_kind": "Starlette TestClient httpx deprecation",
+    "executed_tests_use_only_synthetic_inputs": true
+  },
+  "decoder_only": {
+    "scope": "local decoder-only audit; no model inference, labels, saved frames or per-video output",
+    "requested_videos": 42,
+    "videos_completed": 42,
+    "errors": {},
+    "sampled_frames": 2911,
+    "non_monotonic_sample_timestamps": 0,
+    "frame_requests": 126,
+    "frames_read": 126,
+    "max_requested_to_actual_timestamp_offset_sec": 0.033333333333333215,
+    "decode_and_three_frame_reads_sec": {
+      "mean": 0.43975681045274195,
+      "median": 0.32037006199971074,
+      "max": 1.5042822500108741,
+      "total": 18.469786039015162
+    }
+  },
+  "model_inference_run": false,
+  "training_run": false,
+  "server_environment_modified": false,
+  "original_source_snapshots_changed_files": 0,
+  "current_branch_accuracy_verified": false
+}

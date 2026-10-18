@@ -1,0 +1,246 @@
+{
+  "date": "2026-10-18",
+  "branch_refs_rechecked_unchanged": {
+    "main": "286927fe0be9b11b38f49279c00925373d0ea123",
+    "docs/status-overview": "0ff07137e0815bf96c19fbb82bdbccf86d6848c7"
+  },
+  "server_disk_comparisons": {
+    "main_snapshot": {
+      "checked_baseline_files": 30,
+      "matching_files": 16,
+      "different_files": [
+        "backend/app/analyzers.py",
+        "backend/app/api.py",
+        "backend/app/results.py",
+        "backend/app/worker.py",
+        "data/rules.json",
+        "frontend/format.js",
+        "frontend/index.html",
+        "ml/catalog.py",
+        "ml/detectors/crowd.py",
+        "ml/detectors/personal_items.py",
+        "ml/detectors/workplace.py",
+        "ml/pipeline.py",
+        "ml/scene.py",
+        "ml/video.py"
+      ],
+      "missing_or_unreadable_files": []
+    },
+    "second_branch_snapshot": {
+      "checked_baseline_files": 40,
+      "matching_files": 13,
+      "different_files": [
+        "backend/app/analyzers.py",
+        "backend/app/api.py",
+        "backend/app/results.py",
+        "backend/app/worker.py",
+        "data/rules.json",
+        "frontend/app.js",
+        "frontend/format.js",
+        "frontend/index.html",
+        "ml/catalog.py",
+        "ml/detectors/__init__.py",
+        "ml/detectors/crowd.py",
+        "ml/detectors/personal_items.py",
+        "ml/detectors/workplace.py",
+        "ml/evidence.py",
+        "ml/pipeline.py",
+        "ml/scene.py",
+        "ml/video.py"
+      ],
+      "missing_or_unreadable_files": [
+        "backend/app/audit.py",
+        "backend/app/clips.py",
+        "ml/detectors/camera_tamper.py",
+        "ml/privacy.py",
+        "ml/quality.py",
+        "ml/risk.py",
+        "ml/search.py",
+        "ml/tamper.py",
+        "ml/timeline.py",
+        "ml/trajectory.py"
+      ]
+    }
+  },
+  "previous_server_report_matches": [
+    {
+      "previous_report": "TEAMMATE_STATIC_REVIEW.json",
+      "comparable_file_count": 20,
+      "all_compared_hashes_match": true
+    },
+    {
+      "previous_report": "TEAMMATE_DETAIL_REVIEW.json",
+      "comparable_file_count": 12,
+      "all_compared_hashes_match": true
+    }
+  ],
+  "notebooks": {
+    "files": 2,
+    "with_outputs": 2,
+    "with_attachments": 0,
+    "parse_errors": 0
+  },
+  "public_health_observed": {
+    "status": "ok",
+    "queue": 0,
+    "worker": "alive",
+    "analyzer": "real"
+  },
+  "server_directory_link_to_public_process_verified": false,
+  "runtime_weights_verified": false,
+  "perception_modules_byte_identical_to_main": [
+    "ml/perception/objects.py",
+    "ml/perception/zeroshot.py",
+    "ml/perception/vlm.py"
+  ],
+  "static_structure_comparison": [
+    {
+      "file": "ml/perception/objects.py",
+      "byte_identical": true,
+      "structure_matches_ignoring_strings": true
+    },
+    {
+      "file": "ml/detectors/__init__.py",
+      "byte_identical": true,
+      "structure_matches_ignoring_strings": true
+    },
+    {
+      "file": "ml/detectors/crowd.py",
+      "byte_identical": false,
+      "structure_matches_ignoring_strings": true
+    },
+    {
+      "file": "ml/detectors/workplace.py",
+      "byte_identical": false,
+      "structure_matches_ignoring_strings": true
+    },
+    {
+      "file": "ml/detectors/safe.py",
+      "byte_identical": true,
+      "structure_matches_ignoring_strings": true
+    },
+    {
+      "file": "ml/detectors/personal_items.py",
+      "byte_identical": false,
+      "structure_matches_ignoring_strings": true
+    },
+    {
+      "file": "ml/scene.py",
+      "byte_identical": false,
+      "structure_matches_ignoring_strings": true
+    },
+    {
+      "file": "ml/video.py",
+      "byte_identical": false,
+      "structure_matches_ignoring_strings": true
+    },
+    {
+      "file": "ml/checks.py",
+      "byte_identical": true,
+      "structure_matches_ignoring_strings": true
+    },
+    {
+      "file": "backend/app/config.py",
+      "byte_identical": true,
+      "structure_matches_ignoring_strings": false
+    },
+    {
+      "file": "backend/app/worker.py",
+      "byte_identical": false,
+      "structure_matches_ignoring_strings": true
+    },
+    {
+      "file": "backend/app/results.py",
+      "byte_identical": false,
+      "structure_matches_ignoring_strings": true
+    },
+    {
+      "file": "ml/pipeline.py",
+      "byte_identical": false,
+      "structure_matches_ignoring_strings": true
+    },
+    {
+      "file": "ml/perception/vlm.py",
+      "byte_identical": true,
+      "structure_matches_ignoring_strings": true
+    },
+    {
+      "file": "backend/app/analyzers.py",
+      "byte_identical": false,
+      "structure_matches_ignoring_strings": true
+    }
+  ],
+  "structure_comparison_ignores_text_literals_not_proof_of_identical_behavior": true,
+  "synthetic_before_after": {
+    "execution_environment": "local isolated Python; not server",
+    "before": "unchanged main snapshot",
+    "after": "fix/evidence-and-result-integrity worktree",
+    "video": "generated 96x64 pixels, 10 fps, 2 seconds; no bank data",
+    "cases_before": {
+      "missing_result": {
+        "outcome": "accepted",
+        "verdict": "no_violation"
+      },
+      "missing_verdict": {
+        "outcome": "accepted",
+        "verdict": "no_violation"
+      },
+      "contradictory_result": {
+        "outcome": "accepted",
+        "verdict": "no_violation"
+      },
+      "negative_timestamp": {
+        "outcome": "accepted",
+        "verdict": "violation"
+      },
+      "valid_negative": {
+        "outcome": "accepted",
+        "verdict": "no_violation"
+      },
+      "valid_positive": {
+        "outcome": "accepted",
+        "verdict": "violation"
+      },
+      "evidence_read_failure": {
+        "outcome": "accepted",
+        "verdict": "violation",
+        "uniform_gray_placeholder": true
+      }
+    },
+    "cases_after": {
+      "missing_result": {
+        "outcome": "rejected",
+        "exception_class": "InvalidResult"
+      },
+      "missing_verdict": {
+        "outcome": "rejected",
+        "exception_class": "InvalidResult"
+      },
+      "contradictory_result": {
+        "outcome": "rejected",
+        "exception_class": "InvalidResult"
+      },
+      "negative_timestamp": {
+        "outcome": "rejected",
+        "exception_class": "InvalidResult"
+      },
+      "valid_negative": {
+        "outcome": "accepted",
+        "verdict": "no_violation"
+      },
+      "valid_positive": {
+        "outcome": "accepted",
+        "verdict": "violation"
+      },
+      "evidence_read_failure": {
+        "outcome": "rejected",
+        "exception_class": "EvidenceUnavailable"
+      }
+    },
+    "five_invalid_cases_rejected_after": true,
+    "two_valid_control_cases_preserved": true
+  },
+  "bank_video_inference_run": false,
+  "server_modified": false,
+  "model_accuracy_improvement_claimed": false
+}

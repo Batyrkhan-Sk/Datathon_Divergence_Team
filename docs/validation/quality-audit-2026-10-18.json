@@ -1,0 +1,52 @@
+{
+  "date": "2026-10-18",
+  "base_commit": "286927fe0be9b11b38f49279c00925373d0ea123",
+  "branch": "fix/evidence-and-result-integrity",
+  "test_command": "python -m pytest backend/tests eval/tests -q -p no:cacheprovider",
+  "tests": {
+    "passed": 86,
+    "skipped": 27,
+    "warnings": 1,
+    "elapsed_sec": 2.09,
+    "quality_audit_tests_passed": 41,
+    "real_model_inference": false,
+    "skipped_reason": "legacy test input files absent in isolated worktree"
+  },
+  "data_preparation": {
+    "requested_label_rows": 42,
+    "unique_samples": 40,
+    "missing_files": 0,
+    "duplicate_files_removed": 2,
+    "conflicting_groups": 1,
+    "conflicts_by_field": {
+      "label_t": 1,
+      "gt_type": 1
+    }
+  },
+  "label_sources": {
+    "csv_sha256": "919c69bd11905325098abe964179a9e78f8716b466b64e0e87ebf3b1cb8cc5a3",
+    "official_xlsx_sha256": "4faf595a2679c2f8b2b41be041de59bb3c11cd6e77d57226f1cbcc14b2cc3e75",
+    "binary_and_time_match_official": true,
+    "event_types_are_team_annotations": true
+  },
+  "manifest_matches_final_source": true,
+  "source_digest": "fa4a36748be2c9a6dda96ab81451073a2cf135a477c195d396d483adff46598c",
+  "new_evaluator_file_sha256": {
+    "eval/quality_audit.py": "6bbce0444f278f97f6c8cdf16899556516a6e35e6ad5d67cf02726c8b961d98f",
+    "eval/quality_metrics.py": "11d7b6547cf82844a10f81f73a4ecc42682c59c33a9753b71d1ef1c0843753b0",
+    "eval/tests/test_quality_audit.py": "b75ac135d0318efd4b430a0bf5cc4f3cfc4df437a51c225becd82be75269d2d2"
+  },
+  "local_test_versions": {
+    "pytest": "9.1.1",
+    "numpy": "2.5.4",
+    "opencv-python-headless": "5.0.0.93",
+    "fastapi": "0.143.3",
+    "httpx": "0.28.1"
+  },
+  "independent_test_claimed": false,
+  "runtime_model_and_weights_verified": false,
+  "server_inference_run": false,
+  "new_accuracy_claimed": false,
+  "full_api_latency_measured": false,
+  "contains_per_video_records_or_media": false
+}

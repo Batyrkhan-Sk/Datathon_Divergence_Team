@@ -4,7 +4,7 @@ import base64
 import cv2
 
 from .events import Event
-from .video import read_frame_at
+from .video import read_frame_with_timestamp
 
 MAX_FRAMES = 3
 JPEG_QUALITY = 85
@@ -31,12 +31,13 @@ def frames_for(video_path: str, event: Event, duration: float) -> list[dict]:
     out = []
     for t in times[:MAX_FRAMES]:
         t = min(max(0.0, t), max(0.0, duration - 0.05))
-        frame = read_frame_at(video_path, t)
-        if frame is None:
+        decoded = read_frame_with_timestamp(video_path, t)
+        if decoded is None:
             continue
-        frame = _draw(frame, _nearest_boxes(event, t))
+        actual_t, frame = decoded
+        frame = _draw(frame, _nearest_boxes(event, actual_t))
         ok, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY])
         if ok:
-            out.append({"timestamp_sec": round(t, 2),
+            out.append({"timestamp_sec": round(actual_t, 4),
                         "image_base64": base64.b64encode(buf.tobytes()).decode("ascii")})
     return out

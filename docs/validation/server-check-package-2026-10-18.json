@@ -1,0 +1,173 @@
+{
+  "date": "2026-10-18",
+  "validation_environment": "local macOS, not NIC server",
+  "python_version": "3.12.14",
+  "tested_package_sha256": "d890342e259745fd8ff50b2441f91bc5b012f7976ed9e3dc443d58842dcadca5",
+  "package_bytes": 32848,
+  "package_copied_without_rebuild": true,
+  "full_fresh_venv_install_and_run_passed": true,
+  "run": {
+    "status": "passed",
+    "source_writes_performed": false,
+    "existing_processes_signalled": false,
+    "public_site_contacted": false,
+    "bank_media_or_notebooks_copied": false,
+    "model_inference_run": false,
+    "base_environment_modified": false,
+    "full_api_latency_measured": false,
+    "model_accuracy_improvement_claimed": false,
+    "source_snapshot": "main_286927f",
+    "source_sha256": {
+      "backend/app/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "backend/app/analyzers.py": "a65d49b89328e251c6f1c1707d3b691d42958b453fa78e0a4713f679346efaf3",
+      "backend/app/api.py": "777ff9c2feaa0a1d837fe6b31bbed63fe1ea318fb606230f64e5bec8e639f37e",
+      "backend/app/config.py": "4aef6429fded1e00a784f5be2808acdbb9ad0e8a267726febc71429387e98b4b",
+      "backend/app/main.py": "9e5665e5434817b5f613e194f4ddcb40b6d43e62b57e8ed8a2bd992d950304d1",
+      "backend/app/results.py": "20ff2ce52fb74872217ac1f06d592ebbe3a9e123c47193d5c8419d35d7807592",
+      "backend/app/store.py": "7a78a85444c07e520cec43dcd3f025c0bc3c9cb1ca23766b34611c7c26a058f7",
+      "backend/app/worker.py": "1119f336e82d9ff1f85671661003ffa0b59e3ed9fca33c4dbbf5bc4cdd8305fc",
+      "data/rules.json": "256502e6fac531c76012b6fb0443583f324318b7db6991bc3d9f0261250b937e",
+      "frontend/api.js": "a2c1b752d91341b503c12cd9bb42eac4530c56d7cc05dbcc18236c2f61c18d41",
+      "frontend/app.js": "e91a2c88810ffbf0a02377ec9cc1e4b84b5108d82d8f38fbdbec0fdc1196dd54",
+      "frontend/format.js": "6011d5363544ddea0c4865c29dae790cfa31bdd18ba0f5e5faab4a5ae09ecbce",
+      "frontend/index.html": "afbf7e7d90ab9ef86fdb7766fbeea7898b9fd0a5cf74b43f9e6ff8b625294f4c",
+      "ml/__init__.py": "03242ad140fe6e905ec84a7759de763321623a78f6cec57aa59f3ad131dcf583",
+      "ml/catalog.py": "c2266fe694ca83dd3eacae8fa60e137feeb835198a3ae39662b20c497641d8b6",
+      "ml/checks.py": "203e8c065142cd9d216b928c6177dc83bf0d679164948707fa65a4393146daef",
+      "ml/detectors/__init__.py": "5288624c286afeb6a94d0a990570627c3f3b54e091af608799f3f4b557f52a36",
+      "ml/detectors/crowd.py": "f656687e276f707d8faa081590d993f2bdc02c18a598020a071ae4ca12c8ab56",
+      "ml/detectors/personal_items.py": "233f6b13232bdfb710cd052bdf86ae39257b3b4554ce9dde493503f22aa4cfd7",
+      "ml/detectors/safe.py": "a2e7b20d8487bd083e1a57ddca6fdbb3ed3614d378872385e865a0e239639fcb",
+      "ml/detectors/workplace.py": "8d968da41dfa19d7cab8fbce02c658eeba25589e3a740382df39555789b9f303",
+      "ml/events.py": "214a0239f16575db4eeededec2091c45c06ea5814d20e31478419a95ea2d15fc",
+      "ml/evidence.py": "4746fbfe00b6dc7c9d1c7a77689de8df6b6affc8371e63354ea451df6f1fee77",
+      "ml/perception/__init__.py": "a7d7f2933cc595072f5f9dd38d6305835fb5a6423d96cf532801e8138bf35916",
+      "ml/perception/objects.py": "b1da366909f3ff115c8eea2898214641ba81d88771346e65cb9d6d1124ce5aea",
+      "ml/perception/vlm.py": "d734d88b92659f74e87f354c1f299a488824d533920c68de84d31d41c59ae08b",
+      "ml/perception/zeroshot.py": "558ef1dd35f601a6b0ff0d0808329307c97f98f75809b2eaf2478cf4b71bb741",
+      "ml/pipeline.py": "53e2b7f9cb1e7e1218b4fbd3d28a68798d1fbd4b3b81812ad6769608186790bf",
+      "ml/scene.py": "dcf2715a2b5bd76d9aa7b6d8836bbd7dcdf75026a084e1f3053e9e484dbf5217",
+      "ml/video.py": "b4a05145f32c4bb86a86002c9b04abe8ba85218f4f13f4b5f2d3ff7fcb23f15d"
+    },
+    "patched_files": [
+      "backend/app/results.py",
+      "ml/video.py",
+      "ml/evidence.py"
+    ],
+    "other_copied_source_files_byte_identical": true,
+    "new_venv_created": true,
+    "baseline_probe": {
+      "missing_result": {
+        "outcome": "accepted",
+        "verdict": "no_violation"
+      },
+      "missing_verdict": {
+        "outcome": "accepted",
+        "verdict": "no_violation"
+      },
+      "contradictory_result": {
+        "outcome": "accepted",
+        "verdict": "no_violation"
+      },
+      "negative_timestamp": {
+        "outcome": "accepted",
+        "verdict": "violation"
+      },
+      "valid_negative": {
+        "outcome": "accepted",
+        "verdict": "no_violation"
+      },
+      "valid_positive": {
+        "outcome": "accepted",
+        "verdict": "violation"
+      },
+      "evidence_read_failure": {
+        "outcome": "accepted",
+        "verdict": "violation",
+        "uniform_gray_placeholder": true
+      }
+    },
+    "candidate_probe": {
+      "missing_result": {
+        "outcome": "rejected",
+        "exception_class": "InvalidResult"
+      },
+      "missing_verdict": {
+        "outcome": "rejected",
+        "exception_class": "InvalidResult"
+      },
+      "contradictory_result": {
+        "outcome": "rejected",
+        "exception_class": "InvalidResult"
+      },
+      "negative_timestamp": {
+        "outcome": "rejected",
+        "exception_class": "InvalidResult"
+      },
+      "valid_negative": {
+        "outcome": "accepted",
+        "verdict": "no_violation"
+      },
+      "valid_positive": {
+        "outcome": "accepted",
+        "verdict": "violation"
+      },
+      "evidence_read_failure": {
+        "outcome": "rejected",
+        "exception_class": "EvidenceUnavailable"
+      }
+    },
+    "tests": {
+      "passed": 86,
+      "failed": 0,
+      "skipped": 0,
+      "collection_errors": 0,
+      "failed_test_names": [],
+      "guard_checks": {
+        "model_import_blocked": true,
+        "tcp_bind_blocked": true,
+        "tcp_connect_blocked": true
+      },
+      "exit_code": 0,
+      "elapsed_sec": 4.429,
+      "dependency_versions": {
+        "packaging": "26.3",
+        "Pygments": "2.21.0",
+        "opentelemetry-api": "1.45.1",
+        "fastapi": "0.143.3",
+        "iniconfig": "2.3.1",
+        "httpcore": "1.0.9",
+        "numpy": "2.5.4",
+        "pluggy": "1.7.0",
+        "pip": "25.0.1",
+        "pytest": "9.1.1",
+        "h11": "0.16.0",
+        "pydantic_core": "2.50.1",
+        "python-multipart": "0.0.32",
+        "starlette": "1.8.0",
+        "python-dotenv": "1.2.4",
+        "certifi": "2026.7.22",
+        "annotated-types": "0.8.0",
+        "annotated-doc": "0.0.5",
+        "typing-inspection": "0.4.4",
+        "httpx": "0.28.1",
+        "typing_extensions": "4.16.0",
+        "pydantic": "2.14.1",
+        "anyio": "4.15.1",
+        "idna": "3.20",
+        "opencv-python-headless": "5.0.0.93"
+      }
+    },
+    "five_invalid_cases_rejected": true,
+    "valid_controls_preserved": true,
+    "original_files_still_identical": true,
+    "elapsed_sec": 249.875
+  },
+  "preflight_gates": {
+    "changed_source_refused_before_setup": true,
+    "work_parent_inside_source_refused": true,
+    "unreplaced_definitions_preserved_verbatim": 10
+  },
+  "bank_media_used": false,
+  "actual_server_run_pending": true
+}

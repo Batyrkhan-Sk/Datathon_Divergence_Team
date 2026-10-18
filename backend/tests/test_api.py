@@ -2,7 +2,6 @@
 
     .venv/Scripts/python -m pytest backend/tests -v
 """
-import base64
 import os
 import sqlite3
 import time
@@ -223,21 +222,13 @@ def test_analyzer_load_failure_does_not_hang(tmp_path):
         assert body["status"] == "failed" and "load" in body["error"]
 
 
-def test_messy_output_is_normalised(tmp_path):
+def test_messy_output_fails_instead_of_inventing_result(tmp_path):
     with client(tmp_path, analyzer="backend.tests.stubs:messy") as c:
         job_id = upload(c, CLEAN_VIDEO).json()["job_id"]
         body = wait(c, job_id, timeout=60)
-        assert_contract(body, job_id)
-        vs = body["violations"]
-        assert body["verdict"] == "violation" and len(vs) == 3
-        assert all(0 <= v["timecode_sec"] <= 17.3 for v in vs)
-        assert [len(v["evidence_frames"]) for v in vs] == [1, 2, 3]   # sorted by timecode
-        empty = next(v for v in vs if v["type_id"] == "cash_unattended")
-        assert empty["type"] and empty["description"]
-        assert next(v for v in vs if v["type"] == "X")["confidence"] == 1.0
-        for v in vs:
-            for f in v["evidence_frames"]:
-                assert base64.b64decode(f["image_base64"])[:2] == b"\xff\xd8"
+        assert body["status"] == "failed"
+        assert body["verdict"] is None and body["violations"] == []
+        assert "InvalidResult" in body["error"]
 
 
 # -- persistence -------------------------------------------------------------------

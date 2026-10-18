@@ -1,14 +1,14 @@
-"""Result normalisation (so the jury never gets an invalid result) and API rendering."""
+"""Validate analyzer results, extract source evidence and render the jury API."""
 import base64
 import binascii
 import math
 import re
+from numbers import Real
 
 import cv2
 import numpy as np
 
-from ml import catalog
-from ml.video import probe, read_frame_at
+from ml.video import probe, read_frame_with_timestamp
 
 MAX_FRAMES = 3
 JPEG_QUALITY = 85
@@ -16,6 +16,22 @@ _DATA_URI = re.compile(r"^data:[^,]*,", re.IGNORECASE)
 
 DOC_VIOLATION = ("type", "timecode_sec", "description", "evidence_frames")
 DOC_FRAME = ("timestamp_sec", "image_base64")
+
+
+class InvalidResult(ValueError):
+    """The analyzer did not produce a complete, consistent result."""
+
+
+class EvidenceUnavailable(ValueError):
+    """The requested evidence cannot be decoded from the source video."""
+
+
+def _required_number(value, field: str, minimum: float = 0.0,
+                     maximum: float = math.inf) -> float:
+    if (isinstance(value, bool) or not isinstance(value, Real)
+            or not math.isfinite(value) or not minimum <= value <= maximum):
+        raise InvalidResult(f"{field} must be a finite number within its valid range")
+    return float(value)
 
 
 def _num(value, default: float) -> float:
@@ -45,47 +61,66 @@ def as_jpeg_base64(value) -> str | None:
         raw = base64.b64decode(s, validate=True)
     except (binascii.Error, ValueError):
         return None
-    if raw[:2] == b"\xff\xd8":
-        return base64.b64encode(raw).decode("ascii")
     img = cv2.imdecode(np.frombuffer(raw, np.uint8), cv2.IMREAD_COLOR) if raw else None
     return _encode(img) if img is not None else None
 
 
 def frame_at(video_path: str, t: float, duration: float) -> dict:
-    """Evidence frame extracted from the video; a placeholder if decoding fails."""
-    t = _clamp(t, max(0.0, duration - 0.05))
-    for at in (t, 0.0):
-        img = read_frame_at(video_path, at)
-        if img is not None and (b64 := _encode(img)):
-            return {"timestamp_sec": round(at, 2), "image_base64": b64}
-    img = np.full((240, 320, 3), 128, np.uint8)
-    return {"timestamp_sec": t, "image_base64": _encode(img)}
+    """Read actual source pixels; failure is never replaced with another moment."""
+    t = _required_number(t, "evidence timestamp", maximum=duration)
+    decoded = read_frame_with_timestamp(video_path, t)
+    if decoded is None:
+        raise EvidenceUnavailable("cannot decode the requested evidence frame")
+    at, img = decoded
+    if not math.isfinite(at) or not 0 <= at <= duration:
+        raise EvidenceUnavailable("decoded evidence has an invalid timestamp")
+    b64 = _encode(img)
+    if b64 is None:
+        raise EvidenceUnavailable("cannot encode the decoded evidence frame")
+    return {"timestamp_sec": round(at, 4), "image_base64": b64}
 
 
 def normalize(raw: dict, video_path: str) -> dict:
-    """Make the analyzer output satisfy the contract: verdict == bool(violations),
-    every violation has type, timecode in [0, duration], description, 1-3 JPEG frames."""
-    try:
-        duration = probe(video_path).duration
-    except ValueError:
-        duration = 0.0
-    raw = raw if isinstance(raw, dict) else {}
+    """Reject unknown/error outputs and re-read evidence from the uploaded video.
+
+    The worker catches these exceptions and stores status=failed, verdict=null.
+    Analyzer-provided image bytes are not used as evidence of source content.
+    """
+    if not isinstance(raw, dict):
+        raise InvalidResult("analyzer result must be an object")
+    if raw.get("status", "done") != "done" or raw.get("error"):
+        raise InvalidResult("analyzer did not report successful completion")
+    verdict, entries = raw.get("verdict"), raw.get("violations")
+    if verdict not in ("violation", "no_violation") or not isinstance(entries, list):
+        raise InvalidResult("analyzer must return an explicit verdict and event list")
+    if (verdict == "violation") != bool(entries):
+        raise InvalidResult("verdict contradicts the event list")
+    duration = probe(video_path).duration
+    if not math.isfinite(duration) or duration <= 0:
+        raise InvalidResult("source video duration is unavailable")
     violations = []
-    for v in raw.get("violations") or []:
+    for v in entries:
         if not isinstance(v, dict):
-            continue
+            raise InvalidResult("each event must be an object")
         type_id = str(v.get("type_id") or "").strip()
-        vtype = str(v.get("type") or "").strip() or catalog.type_name(type_id)
-        tc = _clamp(_num(v.get("timecode_sec"), 0.0), duration)
-        desc = str(v.get("description") or "").strip() or (
-            f"{vtype}: признаки возможного нарушения на {tc:.1f} с.")
+        vtype, desc = v.get("type"), v.get("description")
+        if not isinstance(vtype, str) or not vtype.strip():
+            raise InvalidResult("event type is missing")
+        if not isinstance(desc, str) or not desc.strip():
+            raise InvalidResult("observed event description is missing")
+        vtype, desc = vtype.strip(), desc.strip()
+        tc = _required_number(v.get("timecode_sec"), "event timecode", maximum=duration)
+        source_frames = v.get("evidence_frames", [])
+        if not isinstance(source_frames, list):
+            raise InvalidResult("evidence frames must be a list")
         frames = []
-        for f in v.get("evidence_frames") or []:
+        for f in source_frames:
             if len(frames) == MAX_FRAMES:
                 break
-            if isinstance(f, dict) and (b64 := as_jpeg_base64(f.get("image_base64"))):
-                ts = _clamp(_num(f.get("timestamp_sec"), tc), duration)
-                frames.append({"timestamp_sec": ts, "image_base64": b64})
+            if not isinstance(f, dict):
+                raise InvalidResult("each evidence reference must be an object")
+            ts = _required_number(f.get("timestamp_sec"), "evidence timestamp", maximum=duration)
+            frames.append(frame_at(video_path, ts, duration))
         if not frames:
             frames.append(frame_at(video_path, tc, duration))
 
@@ -93,15 +128,15 @@ def normalize(raw: dict, video_path: str) -> dict:
         if type_id:
             out["type_id"] = type_id
         if "confidence" in v:
-            out["confidence"] = round(min(max(_num(v["confidence"], 0.0), 0.0), 1.0), 3)
+            out["confidence"] = round(_required_number(v["confidence"], "confidence", maximum=1.0), 3)
         if "rule" in v:
             out["rule"] = v["rule"] if isinstance(v["rule"], dict) else None
         violations.append(out)
 
     violations.sort(key=lambda x: x["timecode_sec"])
-    result = {"verdict": "violation" if violations else "no_violation", "violations": violations}
+    result = {"verdict": verdict, "violations": violations}
     if "processing_sec" in raw:
-        result["processing_sec"] = round(_num(raw["processing_sec"], 0.0), 2)
+        result["processing_sec"] = round(_required_number(raw["processing_sec"], "processing time"), 2)
     scene = raw.get("scene")
     if isinstance(scene, dict) and (b64 := as_jpeg_base64(scene.get("image_base64"))):
         result["scene"] = {"timestamp_sec": _clamp(_num(scene.get("timestamp_sec"), 0.0), duration),
