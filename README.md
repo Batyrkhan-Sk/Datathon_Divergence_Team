@@ -12,7 +12,7 @@ The result is a hint for a human reviewer, not a legal conclusion.
 
 ## Project status
 
-**Current score (`eval/run_eval.py`, v21, GPU server, VLM on; LIVE):** recall **13/22**, false alarms **0/20** (unique videos: 13/21 caught, 0/19 false; accuracy 80%, precision 100%). Timecodes **92%** within 2 s, type accuracy **92%**, about 6 s per video. Submission document: `docs/SUBMISSION.md`.
+**Current score (`eval/run_eval.py`, v21, GPU server, VLM on; LIVE):** recall **13/22**, false alarms **0/20** (unique videos: 13/21 caught, 0/19 false; accuracy 80%, precision 100%). Timecodes **92%** within 2 s, type accuracy **92%**, about 7 s per video (max 22 s). Submission document: `docs/SUBMISSION.md`.
 
 | Version | Caught | False alarms |
 |---|---|---|
