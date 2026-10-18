@@ -26,13 +26,16 @@ MERGE_WINDOW_SEC = 8.0    # same-type events closer than this are one violation 
 def _merge(events: list[Event]) -> list[Event]:
     events = sorted(events, key=lambda e: (e.type_id, e.t_start))
     merged: list[Event] = []
+    group_end = 0.0  # gap is measured from the end of the group (cup seen 0-43 s and 44-90 s)
     for e in events:
         last = merged[-1] if merged else None
-        if last and last.type_id == e.type_id and e.t_start - last.t_start <= MERGE_WINDOW_SEC:
+        if last and last.type_id == e.type_id and e.t_start - group_end <= MERGE_WINDOW_SEC:
+            group_end = max(group_end, e.t_end or e.t_start)
             if e.confidence > last.confidence:
                 merged[-1] = e
             continue
         merged.append(e)
+        group_end = e.t_end or e.t_start
     return sorted(merged, key=lambda e: e.t_start)
 
 

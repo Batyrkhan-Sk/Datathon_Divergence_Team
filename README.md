@@ -12,7 +12,7 @@ The result is a hint for a human reviewer, not a legal conclusion.
 
 ## Project status
 
-**Current score (`eval/run_eval.py`, v19, GPU server, VLM on; LIVE):** recall **13/22**, false alarms **0/20** (unique videos: 13/21 caught, 0/19 false; accuracy 80%, precision 100%). Timecodes **92%** within 2 s, type accuracy **92%**, about 6 s per video. Submission document: `docs/SUBMISSION.md`.
+**Current score (`eval/run_eval.py`, v21, GPU server, VLM on; LIVE):** recall **13/22**, false alarms **0/20** (unique videos: 13/21 caught, 0/19 false; accuracy 80%, precision 100%). Timecodes **92%** within 2 s, type accuracy **92%**, about 6 s per video. Submission document: `docs/SUBMISSION.md`.
 
 | Version | Caught | False alarms |
 |---|---|---|
@@ -30,7 +30,8 @@ The result is a hint for a human reviewer, not a legal conclusion.
 | v16: workplace fallback + merge window 8 s | 13/22 | 0/20; all 4 camera variants unchanged with 0 FA. If no laptop is visible (new angle), the workplace is taken from where the teller sits most of the time; simulated "laptop hidden" run: **10/22, 0/20** (before: the departure, cash and belongings checks were off without a laptop). Money needs score ≥ 0.15 in that mode (first try: 1 FA on X-23 at 0.09). X-46 now one episode instead of two |
 | v17: UI polish + checklist | 13/22 | 0/20 (detections unchanged). Compact verdict, disclaimer as a hover tooltip, new icon, timeline removed, the frame viewer plays the moment in place. «Как сервис понял сцену» replaced by «Что проверил сервис» (`ml/checks.py`, extra `checks` field): found / not found / not checked with the reason per type; scene photo (boxes only) collapsed under it |
 | v18: adilet deep links | 13/22 | 0/20 (detections unchanged). Rule links open adilet scrolled to the cited clause with it highlighted (text fragment `#:~:text=`, `ml/catalog.deep_link`; checked for all 9 types in Chrome). Timecode buttons play from the timecode; footer and «О результате» label removed (ⓘ tooltip kept) |
-| **v19 (LIVE): real frame timestamps** | **13/22** | **0/20**; timecodes within 2 s 85% → **92%**. Format stress test (15 variants via the API: HEVC, rotation flag, variable fps, 60 fps, 1080p, 4K 12 s, landscape, 4-min video 34 s, .mp4, Cyrillic name, 3 s clip): all processed, same verdict and type. Found: variable frame rate shifted timecodes (10.0 → 6.5 s); fixed by sampling on frame timestamps (`ml/video.py`), duration from ffprobe |
+| v19: real frame timestamps | 13/22 | 0/20; timecodes within 2 s 85% → **92%**. Format stress test (15 variants via the API: HEVC, rotation flag, variable fps, 60 fps, 1080p, 4K 12 s, landscape, 4-min video 34 s, .mp4, Cyrillic name, 3 s clip): all processed, same verdict and type. Found: variable frame rate shifted timecodes (10.0 → 6.5 s); fixed by sampling on frame timestamps (`ml/video.py`), duration from ffprobe |
+| **v21 (LIVE): external-video check** | **13/22** | **0/20** (eval unchanged). 13 outside clips through the service, no tuning: Edinburgh Office Monitoring (4 real office CCTV excerpts, 90–120 s), 7 Mixkit stock clips (bank desk, checkouts, pharmacy, meeting, safe-deposit boxes, counting machine), 2 public-domain Wikimedia Commons clips (VP9 CCTV, 4K AV1 bodycam, 4 min in 46 s). No crashes, all within the limit. Alarms match the rules: crowd of 3+ people (shop checkout, meeting, bodycam), a real cup on the desk, papers on the desk when the person left (open-vocabulary cash detector cannot tell papers from banknotes). Fixed: same-type episodes now merged by gap from the previous end (one cup was reported twice), crowd text gives the typical count, not one frame's. Camera variants re-run: mirror 12/22, tilt 12/22, zoom 10/22, lower quality 7/22, laptop hidden 10/22, same recall as v16; 0 false alarms except 1 on tilted X-12 (cup, 12 s). Traced to v19 frame sampling (v18 sampling: no alarm; v20 code without the v21 fixes: same alarm), not changed: v19 fixes real timecode drift. Model weights: `deploy/download_models.sh` (tested on an empty cache); 27/27 backend tests |
 
 Missed: X-22, X-13 (key left in safe: too small to see), X-32 (door left open), X-34
 (client absent), X-1, X-44, X-4 = X-47 (counting cash by hand), X-2 (type unclear).
@@ -195,6 +196,8 @@ python -m venv .venv
 .venv/Scripts/python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126
 .venv/Scripts/python -m pip install -r requirements-ml.txt
 ```
+
+Model weights are not in git (open models from Hugging Face, ~22 GB with Qwen3-VL-8B). Download them once into `hf_cache/` with `bash deploy/download_models.sh` (needs internet); after that the service runs offline. `deploy/run_server.sh` also downloads them on first start if `hf_cache/` is missing.
 
 | Path | What | Source |
 |---|---|---|

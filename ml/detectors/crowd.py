@@ -80,9 +80,12 @@ def detect(ctx: Context) -> list[Event]:
             continue
         onset = min(end, start + CROWD_ONSET_SEC)
         i = min(range(len(times)), key=lambda k: abs(times[k] - onset))
+        # Typical count over the episode: one frame can miss a person (said "2 человека").
+        n = int(np.median([len(p) for t, p in zip(times, people)
+                           if start <= t <= end and len(p) >= MIN_PEOPLE]))
         events.append(Event(
             "unauthorized_access", onset, t_end=end, confidence=0.6,
-            observation=(f"В помещении кассы одновременно находятся {len(people[i])} человека "
+            observation=(f"В помещении кассы одновременно находятся не менее {n} человек "
                          f"в течение {end - start:.0f} с (с {start:.0f} по {end:.0f} с): помимо "
                          f"кассира и клиента в помещении находится ещё как минимум один человек"),
             evidence_times=[min(end, onset + 1.0)],

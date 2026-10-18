@@ -49,7 +49,8 @@ python -m venv env && env/bin/pip install -r requirements.txt -r backend/require
 env/bin/pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126
 env/bin/pip install -r requirements-ml.txt
 echo "API_KEY=<ключ>" > .env
-bash deploy/run_server.sh        # сервис на :8000 (модели загружаются при старте)
+bash deploy/download_models.sh   # однократно: веса моделей в hf_cache/ (~22 ГБ, нужен интернет)
+bash deploy/run_server.sh        # сервис на :8000, работает офлайн
 bash deploy/run_tunnel.sh        # (опционально) публичный HTTPS-адрес
 bash deploy/watchdog.sh          # (опционально) автоперезапуск сервиса и туннеля
 ```
