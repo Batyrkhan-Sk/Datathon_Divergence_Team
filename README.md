@@ -10,18 +10,7 @@ The result is a hint for a human reviewer, not a legal conclusion.
 **Live service:** https://eggbeater-stardom-unsaid.ngrok-free.dev — web UI at `/`, jury API at
 `/api/v1/analyze` and `/api/v1/jobs/{id}` (header `X-API-Key`). Details: `docs/SUBMISSION.md`.
 
-[Product preview](#product-preview) · [Architecture](#architecture) · [Results](#project-status) · [API](#api) · [Setup](#setup-development)
-
-## Product preview
-
-<img width="1280" height="1024" alt="result-demo" src="https://github.com/user-attachments/assets/997f095f-024b-4ba3-b252-f1ecf5c6e8af" />
-
-*Interface example captured from the bundled frontend in demo mode (`?mock=1`),
-using X-26. The displayed findings, confidence and processing time come from the
-mock fixture; this screenshot illustrates the review flow, not a new evaluation run.*
-
-The reviewer can jump to a timecode, enlarge an evidence frame, open the cited
-regulation and download a report.
+[Architecture](#architecture) · [Results](#project-status) · [API](#api) · [Setup](#setup-development)
 
 ## Architecture
 
